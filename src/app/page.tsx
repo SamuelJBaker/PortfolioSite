@@ -423,7 +423,7 @@ export default function Page() {
                 Open resume
               </a>
               <a
-                href="#contact"
+                href={mailtoHref}
                 className="rounded-2xl border border-neutral-800 bg-neutral-900/40 px-5 py-2 hover:bg-neutral-900/60 transition"
               >
                 Email me

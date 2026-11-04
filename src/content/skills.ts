@@ -3,12 +3,29 @@ export type SkillGroup = { label: string; items: string[] };
 export const skills: SkillGroup[] = [
   {
     label: "Languages",
-    items: ["C and C++", "Python", "SQL", "Java", "JavaScript and TypeScript", "C#", "Rust"],
+    items: ["Python", "C++", "SQL", "TypeScript/JavaScript", "Java", "HTML/CSS", "C#", "Rust"],
   },
-  { label: "AI and ML", items: ["PyTorch", "TensorFlow", "OpenCV", "Hugging Face", "Ollama"] },
-  { label: "Web and Backend", items: ["Node.js", "Express", "MongoDB"] },
   {
-    label: "Systems and Graphics",
-    items: ["Linux", "Git", "SDL3", "OpenGL 3.3 and 4.3", "Vulkan 1.3", "DirectX 11"],
+    label: "ML/AI",
+    items: ["PyTorch", "TensorFlow", "MLflow", "FastAPI", "OpenCV", "Hugging Face", "Transformers", "FAISS"],
+  },
+  {
+    label: "Data/Backend",
+    items: [
+      "Node.js",
+      "Express",
+      "REST APIs",
+      "MongoDB",
+      "PostgreSQL",
+      "SQLite",
+      "AWS S3",
+      "React",
+      "Next.js",
+      "Tailwind CSS",
+    ],
+  },
+  {
+    label: "Systems",
+    items: ["Linux", "Git", "CUDA", "OpenGL 4.6", "Docker", "GPU compute", "SDL3", "ImGui"],
   },
 ];
