@@ -1,7 +1,11 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  /* config options here */
+  env: {
+    // Inlined at build time, so the prerendered footer and the hydrated client
+    // render the same year (no hydration mismatch). Updates on each deploy.
+    NEXT_PUBLIC_BUILD_YEAR: String(new Date().getFullYear()),
+  },
 };
 
 export default nextConfig;
