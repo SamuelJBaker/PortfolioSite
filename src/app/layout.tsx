@@ -17,7 +17,6 @@ const geistMono = Geist_Mono({
 });
 
 const BG = "#0a0a0d"; // dark grey
-const DOT = "rgba(255,255,255,0.045)"; // subtle dots
 
 export const metadata: Metadata = {
   title: "Samuel J. Baker IV",

@@ -40,8 +40,6 @@ const N2A: Record<string, string> = {
   "798":"TV","158":"TW","304":"GL","344":"HK","446":"MO","275":"PS",
 };
 
-const GEO_URL = "https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json";
-
 type Props = {
   keyStats: KeyStat[];
   timeline: DayStat[];
