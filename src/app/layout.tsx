@@ -53,7 +53,7 @@ const prepaintStyle: React.CSSProperties = {
 </head>
       <body
         style={{ backgroundColor: BG }}
-        className={`${geistSans.variable} ${geistMono.variable} antialiased text-neutral-100`}
+        className={`${geistSans.variable} ${geistMono.variable} font-sans antialiased text-neutral-100`}
       >
         {/* Prepaint layer: always visible immediately */}
         <div
