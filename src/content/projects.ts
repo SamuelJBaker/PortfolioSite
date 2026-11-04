@@ -1,4 +1,4 @@
-export type Link = { label: string; href: string; external?: boolean; muted?: boolean };
+export type Link = { label: string; href: string; external?: boolean };
 
 export type Project = {
   slug: string;
@@ -31,8 +31,6 @@ export const projects: Project[] = [
         href: "https://www.kaggle.com/datasets/henryhan117/sp-500-historical-data",
         external: true,
       },
-      { label: "Public project brief coming soon", href: "#", muted: true },
-      { label: "Code repo (sanitized) coming soon", href: "#", muted: true },
     ],
     note: "Repo stays private until there is a proposal + baseline results (or an MVP).",
     featured: true,
@@ -90,7 +88,6 @@ export const projects: Project[] = [
       "Added lightweight memory and session persistence to maintain narrative continuity across multi-turn interactions in a text-adventure game loop.",
       "Prototyped agentic interaction patterns for games, focusing on stateful control flow and dialogue-to-action mapping.",
     ],
-    links: [{ label: "Write-up coming soon", href: "#", muted: true }],
     featured: true,
   },
   {
