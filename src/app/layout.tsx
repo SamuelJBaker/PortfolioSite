@@ -17,7 +17,6 @@ const geistMono = Geist_Mono({
 });
 
 const BG = "#0a0a0d"; // dark grey
-const DOT = "rgba(255,255,255,0.045)"; // subtle dots
 
 export const metadata: Metadata = {
   title: "Samuel J. Baker IV",
@@ -54,7 +53,7 @@ const prepaintStyle: React.CSSProperties = {
 </head>
       <body
         style={{ backgroundColor: BG }}
-        className={`${geistSans.variable} ${geistMono.variable} antialiased text-neutral-100`}
+        className={`${geistSans.variable} ${geistMono.variable} font-sans antialiased text-neutral-100`}
       >
         {/* Prepaint layer: always visible immediately */}
         <div

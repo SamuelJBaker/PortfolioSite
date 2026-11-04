@@ -154,9 +154,6 @@ export function InteractiveModel({
 }: InteractiveModelProps) {
   const { triggerInferencePulse } = useBackgroundEffects();
 
-  // No fallback geometry: avoid showing a "backup" model while the GLB loads.
-  if (!modelUrl) return null;
-
   const baseRef = React.useRef<THREE.Group | null>(null);
   const overlayRef = React.useRef<THREE.Group | null>(null);
   const debugRef = React.useRef<THREE.Mesh | null>(null);
@@ -176,7 +173,7 @@ export function InteractiveModel({
   );
 
   const overlayMaterial = useOverlayMaterial(overlayOptions);
-  const { raycaster, pointer, camera, gl } = useThree();
+  const { raycaster, pointer, camera } = useThree();
   const tempPoint = React.useMemo(() => new THREE.Vector3(), []);
 
   React.useEffect(() => {
@@ -248,8 +245,6 @@ React.useEffect(() => {
     }
   });
 
-  const hasModel = Boolean(modelUrl);
-
   const handleGlbGeometry = React.useCallback(
     (geometry: THREE.BufferGeometry, meshWorld: THREE.Matrix4) => {
       if (ownedSourceGeometryRef.current) {
@@ -277,7 +272,7 @@ React.useEffect(() => {
 
   React.useEffect(() => {
     setSourceGeometry(null);
-  }, [hasModel, modelUrl]);
+  }, [modelUrl]);
 
   React.useEffect(() => {
     return () => {
@@ -288,22 +283,23 @@ React.useEffect(() => {
     };
   }, []);
 
+  // No fallback geometry: avoid showing a "backup" model while the GLB loads.
+  if (!modelUrl) return null;
+
   return (
     <group ref={rootRef} scale={fitScale * modelScale}>
       <group ref={contentRef}>
         <group ref={baseRef}>
-          {hasModel && modelUrl ? (
-            <GlbLayer
-              url={modelUrl}
-              material={baseMaterial}
-              onReady={refit}
-              onGeometryReady={handleGlbGeometry}
-            />
-          ) : null}
+          <GlbLayer
+            url={modelUrl}
+            material={baseMaterial}
+            onReady={refit}
+            onGeometryReady={handleGlbGeometry}
+          />
         </group>
 
         <group ref={overlayRef}>
-          {hasModel && modelUrl ? <GlbLayer url={modelUrl} material={overlayMaterial} /> : null}
+          <GlbLayer url={modelUrl} material={overlayMaterial} />
         </group>
 
         {debug ? (
