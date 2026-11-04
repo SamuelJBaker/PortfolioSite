@@ -3,7 +3,17 @@
 import * as React from "react";
 import Image from "next/image";
 import { motion } from "framer-motion";
-import { now } from "../content/now";
+import {
+  education,
+  experience,
+  mailtoHref,
+  metrics,
+  now,
+  profile,
+  projects,
+  skills,
+} from "../content";
+import type { Link } from "../content";
 
 const HEADSHOT_SRC = "/headshot.jpg";
 
@@ -80,116 +90,11 @@ function Badge({ children }: { children: React.ReactNode }) {
   );
 }
 
-type Project = {
-  title: string;
-  timeframe: string;
-  location?: string;
-  tags: string[];
-  highlights: string[];
-  links?: Array<{ label: string; href: string; external?: boolean; muted?: boolean }>;
-  note?: string;
-};
 
-const SOCIALS: Social[] = [
-  { name: "LinkedIn", href: "https://www.linkedin.com/in/samuel-j-baker-iv/", Icon: LinkedInIcon },
-  { name: "GitHub", href: "https://github.com/ArousingCarrot", Icon: GitHubIcon },
-  { name: "Email", href: "mailto:hello@samueljbaker.dev", Icon: MailIcon },
-];
-
-const PROJECTS: Project[] = [
-  {
-  title: "Regime-Aware Volatility Forecasting (S&P 500) from EDGAR + Earnings Calls",
-  timeframe: "Feb 2026 to Present",
-  location: "Charlottesville, VA",
-  tags: ["Time Series", "NLP", "Temporal Fusion Transformer", "Regime Switching", "EDGAR", "Earnings Calls"],
-  highlights: [
-    "Forecasting next-day realized volatility (risk, not returns) from open-licensed daily S&P 500 OHLC history (1927–2020), using OHLC-derived targets and robust lagged baselines.",
-    "Ingesting and timestamp-aligning all major EDGAR filings (including 8-K for higher-frequency events) and earnings call transcripts; emphasizing domain-specific, context-aware sentiment/aspect signals over generic polarity.",
-    "Training a regime-aware Temporal Fusion Transformer-style forecaster (regime indicators / mixture-of-experts) and benchmarking against HAR-RV and price-only baselines, with attribution back to specific disclosures and event windows.",
-  ],
-  links: [
-    {
-      label: "Dataset (Kaggle)",
-      href: "https://www.kaggle.com/datasets/henryhan117/sp-500-historical-data",
-      external: true,
-    },
-    { label: "Public project brief coming soon", href: "#", muted: true },
-    { label: "Code repo (sanitized) coming soon", href: "#", muted: true },
-  ],
-  note: "Repo stays private until there is a proposal + baseline results (or an MVP).",
-},  
-  {
-    title: "Entity Component System Game Engine",
-    timeframe: "Jun 2025 to Present",
-    location: "Charlottesville, VA",
-    tags: ["C++", "ECS", "Performance", "Tools", "OpenGL", "ImGui"],
-highlights: [
-  "Developed a C++20 ECS game engine using SDL3 and OpenGL with an ImGui editor, asset pipeline and profiling tools.",
-  "Implemented a real-time GPU path tracer via OpenGL compute shaders (progressive accumulation and A-Trous denoising), achieving 200-40 FPS at 1-8 samples per pixel on an RTX 4070 laptop GPU.",
-  "Redesigned component storage from hash maps to dense arrays, reducing 100k entity add/remove operations from 99.8ms to 11.8ms (~88% reduction, 8.5x faster); and system-update time from 39.8ms to 6.93ms (~83% reduction, 5.7x faster); scaled to multi-million polygon scenes with ~27.8 ns component lookup."
-],
-    links: [{ 
-      label: "Github repo",
-      href: "https://github.com/ArousingCarrot/ECSGameEngine",
-      external: true,    
-    }
-  ],
-    note: "Public repo. WIP; happy to walk through architecture and performance optimizations in detail on request.",
-  },
-  {
-    title: "Self-Hosted AI Infrastructure Lab",
-    timeframe: "Jun 2025 to Present",
-    location: "Charlottesville, VA",
-    tags: ["Python", "Hugging Face", "Ollama", "Linux", "Systems"],
-    highlights: [
-      "Built and operate a self-hosted homelab for local LLM inference and multiplayer game services, prioritizing privacy, transparency, and control over third-party cloud platforms.",
-      "Implemented secure remote access over SSH and designed architecture for decentralized self-hosted services, with expansion paths for mesh VPN and DNS-layer filtering.",
-      "Developed a custom UI for tokenization and model interaction to accelerate local inference, fine-tuning, and iterative model testing."
-    ],
-  },
-  {
-    title: "Eggs by the Dozen",
-    timeframe: "Apr 2024",
-    location: "University of Virginia",
-    tags: ["Computer Vision", "OpenCV", "Express.js", "Docker"],
-    highlights: [
-      "Collaborated on a 5-member team to build a Dockerized full-stack parasite-screening app with HTML/CSS/JavaScript, Express.js, and Python/OpenCV, automating McMaster-slide analysis for sheep and goat samples.",
-      "Designed a feature-based CV pipeline using grayscale blur, thresholding, contour detection, and ellipse/shape-color matching to estimate eggs per gram under iPhone 6 and low-connectivity constraints, avoiding CNNs due to limited labeled data.",
-      "Improved threshold selection from a fixed value to modified Otsu with a translational shift, enabling correct health-condition classification on all test samples while reducing testing cost and turnaround versus the manual McMaster workflow."
-    ],
-    links: [{ label: "Read report (PDF)", href: "/papers/EggsByTheDozen.pdf" }],
-  },
-  {
-    title: "Agentic RPG Arbiter",
-    timeframe: "Aug 2025",
-    location: "Charlottesville, VA",
-    tags: ["LLM", "Agentic Systems", "Game Design", "State"],
-    highlights: [
-      "Built a chat-driven RPG arbiter that converts player dialogue into persistent state flags and event triggers, enabling branching narrative and adaptive encounters.",
-      "Added lightweight memory and session persistence to maintain narrative continuity across multi-turn interactions in a text-adventure game loop.",
-      "Prototyped agentic interaction patterns for games, focusing on stateful control flow and dialogue-to-action mapping."
-    ],
-    links: [{ label: "Write-up coming soon", href: "#", muted: true }],
-  },
-  {
-    title: "Mycorrhizal Fungi Inoculation in Soybeans",
-    timeframe: "Feb 2023",
-    location: "Chesapeake Bay Governor’s School Symposium",
-    tags: ["Research", "Experiment Design", "Statistics"],
-    highlights: [
-      "Ran controlled inoculation study on soybeans (n=60, 6 groups, 2 trials) under 70% / 100% / 130% water-holding capacity over 7-8 weeks.",
-      "Found significant differences in shoot dry mass (p=0.007-0.023) and chlorophyll (p=0.014-0.032); presented at Chesapeake Bay Governor’s School symposium (VCU)."
-    ],
-    links: [{ label: "Read paper (PDF)", href: "/papers/SeniorProject.pdf" }],
-  },
-];
-
-type Metric = { label: string; value: string; detail: string };
-
-const METRICS: Metric[] = [
-  { label: "ECS add/remove", value: "8.6x faster", detail: "100k entities: 99.8 ms to 11.8 ms" },
-  { label: "System update", value: "5.7x faster", detail: "39.8 ms to 6.93 ms per frame" },
-  { label: "Component lookups", value: "100M in 2.78 s", detail: "27.8 ns per access" },
+const socials: Social[] = [
+  { name: "LinkedIn", href: profile.linkedin, Icon: LinkedInIcon },
+  { name: "GitHub", href: profile.github, Icon: GitHubIcon },
+  { name: "Email", href: `mailto:${profile.email}`, Icon: MailIcon },
 ];
 
 const NOW_READING = now.reading;
@@ -238,7 +143,7 @@ React.useEffect(() => {
   async function run() {
     try {
       setState((prev) =>
-        prev.status === "ready" ? prev : { ...prev, status: "loading", text: "Loading now playing…" }
+        prev.status === "ready" ? prev : { ...prev, status: "loading", text: "Loading now playing\u2026" }
       );
 
       const res = await fetch("/api/now-playing", { cache: "no-store" });
@@ -341,13 +246,13 @@ function ResumePreview() {
 
       <div className="mt-4 hidden md:block">
         <div className="aspect-[8.5/11] w-full overflow-hidden rounded-xl border border-neutral-800 bg-neutral-950/50">
-          <iframe title="Resume preview" src="/Samuel_Baker_Resume.pdf" className="h-full w-full" />
+          <iframe title="Resume preview" src={profile.resumePath} className="h-full w-full" />
         </div>
       </div>
 
       <div className="mt-4 flex flex-wrap gap-3">
         <a
-          href="/Samuel_Baker_Resume.pdf"
+          href={profile.resumePath}
           className="inline-flex items-center gap-2 rounded-2xl border border-neutral-800 bg-neutral-900/40 px-5 py-2 text-sm text-neutral-200 hover:bg-neutral-900/60 transition"
         >
           <FileIcon className="h-4 w-4" />
@@ -355,7 +260,7 @@ function ResumePreview() {
         </a>
 
         <a
-          href="/Samuel_Baker_Resume.pdf"
+          href={profile.resumePath}
           download
           className="inline-flex items-center gap-2 rounded-2xl border border-neutral-800 bg-neutral-900/40 px-5 py-2 text-sm text-neutral-200 hover:bg-neutral-900/60 transition"
         >
@@ -370,6 +275,32 @@ function coverUrlFromIsbn(isbn13: string) {
   // Open Library Covers API (append ?default=false to get 404 if missing)
   return `https://covers.openlibrary.org/b/isbn/${encodeURIComponent(isbn13)}-L.jpg?default=false`;
 }
+
+function ProjectLinks({ links, className = "mt-5" }: { links?: Link[]; className?: string }) {
+  if (!links?.length) return null;
+  return (
+    <div className={classNames(className, "flex flex-wrap gap-3")}>
+      {links.map((l) => {
+        const isHttp = l.href.startsWith("http");
+        return (
+          <a
+            key={l.label}
+            href={l.href}
+            target={isHttp ? "_blank" : undefined}
+            rel={isHttp ? "noreferrer" : undefined}
+            className="inline-flex items-center gap-2 rounded-2xl border px-4 py-2 text-sm transition border-neutral-800 bg-neutral-900/40 text-neutral-200 hover:bg-neutral-900/60"
+          >
+            <span>{l.label}</span>
+            {l.external || isHttp ? <ExternalLinkIcon className="h-4 w-4 opacity-70" /> : null}
+          </a>
+        );
+      })}
+    </div>
+  );
+}
+
+const featuredProjects = projects.filter((p) => p.featured);
+const earlierProjects = projects.filter((p) => !p.featured);
 
 export default function Page() {
   return (
@@ -402,7 +333,7 @@ export default function Page() {
 
           <div className="flex items-center gap-2">
             <a
-              href="/Samuel_Baker_Resume.pdf"
+              href={profile.resumePath}
               className="inline-flex items-center gap-2 rounded-2xl border border-yellow-300/40 bg-yellow-300/10 px-4 py-2 text-sm text-yellow-100 hover:bg-yellow-300/15 transition"
               title="Open resume"
             >
@@ -411,7 +342,7 @@ export default function Page() {
             </a>
 
             <a
-              href="/Samuel_Baker_Resume.pdf"
+              href={profile.resumePath}
               download
               className="inline-flex items-center gap-2 rounded-2xl border border-neutral-800 bg-neutral-900/40 px-3 py-2 text-sm text-neutral-200 hover:bg-neutral-900/60 transition"
               title="Download resume PDF"
@@ -421,7 +352,7 @@ export default function Page() {
             </a>
 
             <div className="ml-1 flex items-center gap-2">
-              {SOCIALS.map((s) => (
+              {socials.map((s) => (
                 <a
                   key={s.name}
                   href={s.href}
@@ -446,25 +377,18 @@ export default function Page() {
           transition={{ duration: 0.8 }}
           className="max-w-5xl"
         >
-          <p className="tracking-widest text-xs uppercase text-neutral-400">Computer Science (AI) at UVA</p>
+          <p className="tracking-widest text-xs uppercase text-neutral-400">{profile.tagline}</p>
 
           <div className="mt-3 grid gap-8 md:grid-cols-[minmax(0,1fr)_auto] md:items-stretch">
             <div className="min-w-0">
-              <h1 className="text-4xl md:text-6xl font-semibold leading-tight">Samuel J. Baker IV</h1>
+              <h1 className="text-4xl md:text-6xl font-semibold leading-tight">{profile.name}</h1>
 
-<p className="mt-5 text-lg md:text-xl text-neutral-300 leading-relaxed">
-  I am a third-year Computer Science student at the University of Virginia on the AI track,
-  focused on building production-minded ML systems with measurable performance. My work spans
-  computer vision and applied ML, from data pipelines and model training to evaluation and
-  inference optimization. In parallel, I do performance engineering in C++: profiling hot
-  paths, improving memory/layout, and building tooling and diagnostics that keep systems fast
-  as they scale.
-</p>
-
-              <p className="mt-4 text-base text-neutral-400 leading-relaxed">
-                Outside of code, I care about game design, weightlifting, film, music (guitar), and reading. If you want a quick snapshot
-                of what I am doing other than projects, scroll to the Now section.
-              </p>
+              <p className="mt-5 text-lg md:text-xl text-neutral-300 leading-relaxed">{profile.bio[0]}</p>
+              {profile.bio.slice(1).map((para) => (
+                <p key={para} className="mt-4 text-base text-neutral-400 leading-relaxed">
+                  {para}
+                </p>
+              ))}
             </div>
 
             <div className="flex justify-center md:justify-end md:translate-x-8 lg:translate-x-30">
@@ -472,7 +396,7 @@ export default function Page() {
                 <div className="relative h-full w-full overflow-hidden rounded-full">
                   <Image
                     src={HEADSHOT_SRC}
-                    alt="Samuel J. Baker IV headshot"
+                    alt={`${profile.name} headshot`}
                     fill
                     sizes="(min-width: 768px) 360px, 128px"
                     className="object-cover"
@@ -493,13 +417,13 @@ export default function Page() {
                 Explore projects
               </a>
               <a
-                href="/Samuel_Baker_Resume.pdf"
+                href={profile.resumePath}
                 className="rounded-2xl border border-neutral-800 bg-neutral-900/40 px-5 py-2 hover:bg-neutral-900/60 transition"
               >
                 Open resume
               </a>
               <a
-                href="#contact"
+                href={mailtoHref}
                 className="rounded-2xl border border-neutral-800 bg-neutral-900/40 px-5 py-2 hover:bg-neutral-900/60 transition"
               >
                 Email me
@@ -512,7 +436,7 @@ export default function Page() {
 
 
         <div className="mt-10 grid gap-4 sm:grid-cols-3">
-          {METRICS.map((m, i) => (
+          {metrics.map((m, i) => (
             <motion.div
               key={m.label}
               initial={{ opacity: 0, y: 10 }}
@@ -528,12 +452,59 @@ export default function Page() {
           ))}
         </div>
 
+        {experience.length > 0 ? (
+          <div className="mt-16">
+            <Section id="experience" eyebrow="Career" title="Experience">
+              <div className="grid gap-6">
+                {experience.map((e, i) => (
+                  <motion.article
+                    key={`${e.company}-${e.start}`}
+                    initial={{ opacity: 0, y: 12 }}
+                    whileInView={{ opacity: 1, y: 0 }}
+                    viewport={{ once: true, amount: 0.25 }}
+                    transition={{ duration: 0.5, delay: i * 0.06 }}
+                    className="rounded-2xl border border-neutral-800 bg-neutral-900/35 p-6 backdrop-blur-sm hover:bg-neutral-900/55 transition"
+                  >
+                    <div className="flex items-start justify-between gap-4">
+                      <div>
+                        <h3 className="text-lg md:text-xl font-medium">{e.company}</h3>
+                        <p className="mt-1 text-sm text-neutral-300">{e.role}</p>
+                        <p className="mt-1 text-sm text-neutral-400">
+                          {`${e.start} to ${e.end} \u00b7 ${e.location}`}
+                        </p>
+                      </div>
+                      <div className="hidden sm:block text-right text-xs text-neutral-500">
+                        {e.tags.slice(0, 3).join(" \u00b7 ")}
+                      </div>
+                    </div>
+
+                    <div className="mt-4 flex flex-wrap gap-2">
+                      {e.tags.map((t) => (
+                        <Badge key={t}>{t}</Badge>
+                      ))}
+                    </div>
+
+                    <ul className="mt-4 space-y-2 text-sm text-neutral-300">
+                      {e.bullets.map((b) => (
+                        <li key={b} className="flex gap-3">
+                          <span className="mt-2 h-1.5 w-1.5 rounded-full bg-yellow-200/80 flex-none" />
+                          <span>{b}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </motion.article>
+                ))}
+              </div>
+            </Section>
+          </div>
+        ) : null}
+
         <div className="mt-16">
           <Section id="projects" eyebrow="Work" title="Projects">
             <div className="grid gap-6 lg:grid-cols-2">
-              {PROJECTS.map((p, i) => (
+              {featuredProjects.map((p, i) => (
                 <motion.article
-                  key={p.title}
+                  key={p.slug}
                   initial={{ opacity: 0, y: 12 }}
                   whileInView={{ opacity: 1, y: 0 }}
                   viewport={{ once: true, amount: 0.25 }}
@@ -545,11 +516,11 @@ export default function Page() {
                       <h3 className="text-lg md:text-xl font-medium">{p.title}</h3>
                       <p className="mt-1 text-sm text-neutral-400">
                         {p.timeframe}
-                        {p.location ? ` · ${p.location}` : ""}
+                        {p.location ? ` \u00b7 ${p.location}` : ""}
                       </p>
                     </div>
                     <div className="hidden sm:block text-right text-xs text-neutral-500">
-                      {p.tags.slice(0, 3).join(" · ")}
+                      {p.tags.slice(0, 3).join(" \u00b7 ")}
                     </div>
                   </div>
 
@@ -570,108 +541,59 @@ export default function Page() {
 
                   {p.note ? <p className="mt-4 text-sm text-neutral-400">{p.note}</p> : null}
 
-                  {p.links?.length ? (
-                    <div className="mt-5 flex flex-wrap gap-3">
-                      {p.links.map((l) => {
-                        const disabled = l.muted || l.href === "#";
-                        const href = disabled ? "#projects" : l.href;
-
-                        return (
-                          <a
-                            key={l.label}
-                            href={href}
-                            target={!disabled && l.href.startsWith("http") ? "_blank" : undefined}
-                            rel={!disabled && l.href.startsWith("http") ? "noreferrer" : undefined}
-                            className={classNames(
-                              "inline-flex items-center gap-2 rounded-2xl border px-4 py-2 text-sm transition",
-                              disabled
-                                ? "border-neutral-800 bg-neutral-950/10 text-neutral-500 cursor-not-allowed"
-                                : "border-neutral-800 bg-neutral-900/40 text-neutral-200 hover:bg-neutral-900/60"
-                            )}
-                            aria-disabled={disabled}
-                            onClick={(e) => {
-                              if (disabled) e.preventDefault();
-                            }}
-                          >
-                            <span>{l.label}</span>
-                            {!disabled && (l.external || l.href.startsWith("http")) ? (
-                              <ExternalLinkIcon className="h-4 w-4 opacity-70" />
-                            ) : null}
-                          </a>
-                        );
-                      })}
-                    </div>
-                  ) : null}
+                  <ProjectLinks links={p.links} />
                 </motion.article>
               ))}
             </div>
 
-            <div className="mt-10 rounded-2xl border border-neutral-800 bg-neutral-900/25 p-6">
-              <p className="text-sm text-neutral-300">
-                I do not have screenshots yet for a couple of these. I can add quick walkthrough GIFs and short clips as I package repos for public release.
-              </p>
-            </div>
+            {earlierProjects.length > 0 ? (
+              <details className="mt-10 rounded-2xl border border-neutral-800 bg-neutral-900/25 p-6">
+                <summary className="cursor-pointer text-sm font-medium text-neutral-200">Earlier work</summary>
+                <ul className="mt-4 space-y-6">
+                  {earlierProjects.map((p) => (
+                    <li key={p.slug}>
+                      <div className="flex flex-wrap items-baseline justify-between gap-3">
+                        <p className="text-sm font-medium text-neutral-100">{p.title}</p>
+                        <p className="text-xs text-neutral-500">{p.timeframe}</p>
+                      </div>
+                      <p className="mt-2 text-sm text-neutral-300">{p.highlights[0]}</p>
+                      <ProjectLinks links={p.links} className="mt-3" />
+                    </li>
+                  ))}
+                </ul>
+              </details>
+            ) : null}
           </Section>
         </div>
 
         <div className="mt-16 grid gap-10 lg:grid-cols-2">
           <Section id="skills" eyebrow="Toolkit" title="Skills">
             <div className="grid gap-4">
-              <div className="rounded-2xl border border-neutral-800 bg-neutral-900/35 p-5">
-                <p className="text-sm font-medium">Languages</p>
-                <p className="mt-2 text-sm text-neutral-300">
-                  C and C++, Python, SQL, Java, JavaScript and TypeScript, C#, Rust
-                </p>
-              </div>
-
-              <div className="rounded-2xl border border-neutral-800 bg-neutral-900/35 p-5">
-                <p className="text-sm font-medium">AI and ML</p>
-                <p className="mt-2 text-sm text-neutral-300">
-                  PyTorch, TensorFlow, OpenCV, Hugging Face, Ollama
-                </p>
-              </div>
-
-              <div className="rounded-2xl border border-neutral-800 bg-neutral-900/35 p-5">
-                <p className="text-sm font-medium">Web and Backend</p>
-                <p className="mt-2 text-sm text-neutral-300">
-                  Node.js, Express, MongoDB
-                </p>
-              </div>
-
-              <div className="rounded-2xl border border-neutral-800 bg-neutral-900/35 p-5">
-                <p className="text-sm font-medium">Systems and Graphics</p>
-                <p className="mt-2 text-sm text-neutral-300">
-                  Linux, Git, SDL3, OpenGL 3.3 and 4.3, Vulkan 1.3, DirectX 11
-                </p>
-              </div>
+              {skills.map((g) => (
+                <div key={g.label} className="rounded-2xl border border-neutral-800 bg-neutral-900/35 p-5">
+                  <p className="text-sm font-medium">{g.label}</p>
+                  <p className="mt-2 text-sm text-neutral-300">{g.items.join(", ")}</p>
+                </div>
+              ))}
             </div>
           </Section>
 
           <Section id="education" eyebrow="Background" title="Education">
             <div className="space-y-4">
-              <div className="rounded-2xl border border-neutral-800 bg-neutral-900/35 p-5">
-                <div className="flex flex-wrap items-baseline justify-between gap-3">
-                  <p className="text-sm font-medium">
-                    University of Virginia, School of Engineering and Applied Science
-                  </p>
-                  <p className="text-xs text-neutral-500">Expected May 2027</p>
+              {education.map((ed) => (
+                <div key={ed.institution} className="rounded-2xl border border-neutral-800 bg-neutral-900/35 p-5">
+                  <div className="flex flex-wrap items-baseline justify-between gap-3">
+                    <p className="text-sm font-medium">{ed.institution}</p>
+                    <p className="text-xs text-neutral-500">{ed.dates}</p>
+                  </div>
+                  {ed.detail.map((line, i) => (
+                    <p key={line} className={classNames(i === 0 ? "mt-2" : "mt-1", "text-sm text-neutral-300")}>
+                      {line}
+                    </p>
+                  ))}
+                  <p className="mt-1 text-sm text-neutral-400">GPA {ed.gpa}</p>
                 </div>
-                <p className="mt-2 text-sm text-neutral-300">
-                  BS in Computer Science (AI focal path), Engineering Business minor
-                </p>
-                <p className="mt-1 text-sm text-neutral-400">GPA 3.5</p>
-              </div>
-
-              <div className="rounded-2xl border border-neutral-800 bg-neutral-900/35 p-5">
-                <div className="flex flex-wrap items-baseline justify-between gap-3">
-                  <p className="text-sm font-medium">Rappahannock Community College</p>
-                  <p className="text-xs text-neutral-500">Aug 2019 to May 2023</p>
-                </div>
-                <p className="mt-2 text-sm text-neutral-300">
-                  Associate of Arts and Science, Summa Cum Laude
-                </p>
-                <p className="mt-1 text-sm text-neutral-400">GPA 4.0</p>
-              </div>
+              ))}
             </div>
           </Section>
         </div>
@@ -731,7 +653,7 @@ export default function Page() {
 
               <div className="mt-5 flex flex-wrap gap-3">
                 <a
-                  href="mailto:samuel.j.baker908@gmail.com?subject=Portfolio%20%E2%80%93%20Samuel%20J.%20Baker%20IV"
+                  href={mailtoHref}
                   className="inline-flex items-center gap-2 rounded-2xl border border-neutral-800 bg-neutral-900/40 px-5 py-2 text-sm text-neutral-200 hover:bg-neutral-900/60 transition"
                 >
                   <MailIcon className="h-4 w-4" />
@@ -740,14 +662,14 @@ export default function Page() {
 
                 <button
                   type="button"
-                  onClick={() => navigator.clipboard.writeText("samuel.j.baker908@gmail.com")}
+                  onClick={() => navigator.clipboard.writeText(profile.email)}
                   className="inline-flex items-center gap-2 rounded-2xl border border-neutral-800 bg-neutral-900/40 px-5 py-2 text-sm text-neutral-200 hover:bg-neutral-900/60 transition"
                 >
                   <span>Copy email</span>
                 </button>
 
                 <a
-                  href="https://www.linkedin.com/in/samuel-j-baker-iv/"
+                  href={profile.linkedin}
                   target="_blank"
                   rel="noreferrer"
                   className="inline-flex items-center gap-2 rounded-2xl border border-neutral-800 bg-neutral-900/40 px-5 py-2 text-sm text-neutral-200 hover:bg-neutral-900/60 transition"
@@ -764,12 +686,12 @@ export default function Page() {
 
 <footer className="relative z-10 mt-16 border-t border-neutral-900/80 bg-neutral-950/80 backdrop-blur supports-[backdrop-filter]:bg-neutral-950/60">
   <div className="container mx-auto px-6 py-6 text-sm text-neutral-500 flex flex-wrap items-center justify-between gap-3">
-    <span>© {new Date().getFullYear()} Samuel J. Baker IV</span>
+    <span>&copy; {process.env.NEXT_PUBLIC_BUILD_YEAR} {profile.name}</span>
     <span className="text-neutral-600 text-xs text-center">
       This site collects anonymous visit analytics including approximate location
       and browser information. No personally identifiable information is stored or shared.
     </span>
-    <span className="text-neutral-600">samueljbaker.dev</span>
+    <span className="text-neutral-600">{new URL(profile.siteUrl).host}</span>
   </div>
 </footer>
     </div>
