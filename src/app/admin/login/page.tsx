@@ -17,7 +17,7 @@ export default function LoginPage({
             <div>
               <label
                 htmlFor="password"
-                className="block text-sm text-neutral-400 mb-1"
+                className="block text-sm text-muted mb-1"
               >
                 Password
               </label>
@@ -27,13 +27,13 @@ export default function LoginPage({
                 type="password"
                 required
                 autoFocus
-                className="w-full rounded-xl border border-neutral-800 bg-neutral-900 px-4 py-2 text-sm text-neutral-100 focus:outline-none focus:ring-1 focus:ring-neutral-600"
+                className="w-full rounded-xl border border-line bg-panel px-4 py-2 text-sm text-neutral-100 focus:outline-none focus:ring-1 focus:ring-neutral-600"
               />
             </div>
 
             <button
               type="submit"
-              className="w-full rounded-xl border border-neutral-700 bg-neutral-800 px-4 py-2 text-sm text-neutral-100 hover:bg-neutral-700 transition"
+              className="w-full rounded-xl border border-neutral-700 bg-line px-4 py-2 text-sm text-neutral-100 hover:bg-neutral-700 transition"
             >
               Sign in
             </button>

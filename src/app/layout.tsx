@@ -55,8 +55,8 @@ export default function RootLayout({
 const prepaintStyle: React.CSSProperties = {
   backgroundColor: BG,
   backgroundImage: `
-    radial-gradient(900px circle at 30% 25%, rgba(255,255,255,0.06), transparent 55%),
-    radial-gradient(900px circle at 70% 65%, rgba(255,215,120,0.035), transparent 58%)
+    radial-gradient(900px circle at 30% 25%, rgba(120,150,220,0.055), transparent 55%),
+    radial-gradient(900px circle at 70% 65%, rgba(212,175,90,0.04), transparent 58%)
   `,
   backgroundSize: "auto, auto",
   backgroundPosition: "center, center",

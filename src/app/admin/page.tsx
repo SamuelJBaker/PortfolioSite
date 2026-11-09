@@ -36,37 +36,37 @@ export default async function AdminPage() {
   return (
   <div>
     <h1 className="text-2xl font-semibold mb-2">Dashboard</h1>
-    <p className="text-sm text-neutral-400 mb-8">Quick overview. See <a href="/admin/analytics" className="text-yellow-200/80 hover:text-yellow-200 transition">Analytics</a> for full detail.</p>
+    <p className="text-sm text-muted mb-8">Quick overview. See <a href="/admin/analytics" className="text-accent/80 hover:text-accent transition">Analytics</a> for full detail.</p>
 
     <div className="grid gap-4 sm:grid-cols-2 mb-10">
-      <div className="rounded-2xl border border-neutral-800 bg-neutral-900/35 p-5">
-        <p className="text-xs uppercase tracking-widest text-neutral-400">Total visits</p>
+      <div className="rounded-2xl border border-line bg-panel/35 p-5">
+        <p className="text-xs uppercase tracking-widest text-muted">Total visits</p>
         <p className="mt-2 text-3xl font-semibold">{totalVisits}</p>
       </div>
-      <div className="rounded-2xl border border-neutral-800 bg-neutral-900/35 p-5">
-        <p className="text-xs uppercase tracking-widest text-neutral-400">Unique sessions</p>
+      <div className="rounded-2xl border border-line bg-panel/35 p-5">
+        <p className="text-xs uppercase tracking-widest text-muted">Unique sessions</p>
         <p className="mt-2 text-3xl font-semibold">{uniqueSessions}</p>
       </div>
     </div>
 
     <h2 className="text-lg font-medium mb-4">Recent events</h2>
     {recentEvents.length === 0 && !dbError && (
-      <p className="text-sm text-neutral-400">No events yet.</p>
+      <p className="text-sm text-muted">No events yet.</p>
     )}
     {recentEvents.length > 0 && (
       <div className="overflow-x-auto">
         <table className="w-full text-sm border-collapse">
           <thead>
-            <tr className="border-b border-neutral-800 text-neutral-400 text-left">
+            <tr className="border-b border-line text-muted text-left">
               <th className="pb-3 pr-6 font-medium">Event</th>
               <th className="pb-3 pr-6 font-medium">Key</th>
               <th className="pb-3 pr-6 font-medium">Country</th>
               <th className="pb-3 font-medium">Time</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-neutral-900">
+          <tbody className="divide-y divide-panel">
             {recentEvents.map((e, i) => (
-              <tr key={i} className="text-neutral-300">
+              <tr key={i} className="text-body">
                 <td className="py-3 pr-6 font-mono text-xs">{e.event}</td>
                 <td className="py-3 pr-6">{e.key ?? "-"}</td>
                 <td className="py-3 pr-6">{countryName(e.country ?? "")}</td>

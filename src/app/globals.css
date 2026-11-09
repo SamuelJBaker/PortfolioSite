@@ -5,6 +5,16 @@
   --foreground: #ededed;
 }
 
+@theme {
+  --color-ink: #0a0a0d;
+  --color-panel: #171717;
+  --color-line: #262626;
+  --color-body: #d4d4d4;
+  --color-muted: #a3a3a3;
+  --color-accent: #d4af5a;
+  --color-accent-text: #f1dfa8;
+}
+
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);

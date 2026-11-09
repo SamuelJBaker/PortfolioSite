@@ -16,7 +16,7 @@ import { profile } from "../src/content/profile.ts";
 const WIDTH = 1200;
 const HEIGHT = 630;
 const BG = "#0a0a0d";
-const GOLD = "#f0d07a";
+const GOLD = "#d4af5a";
 
 async function geist(weight: 400 | 600): Promise<ArrayBuffer> {
   const css = await (await fetch(`https://fonts.googleapis.com/css2?family=Geist:wght@${weight}`)).text();
