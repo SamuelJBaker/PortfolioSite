@@ -305,7 +305,7 @@ const earlierProjects = projects.filter((p) => !p.featured);
 export default function Page() {
   return (
     <div className="relative min-h-screen bg-transparent text-neutral-100 overflow-hidden">
-      <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-black/45 via-transparent to-black/75" />
+      <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-ink/35 via-transparent via-30% to-ink/60" />
 
       <div className="sticky top-0 z-30 border-b border-panel/70 bg-neutral-950/50 backdrop-blur supports-[backdrop-filter]:bg-neutral-950/40">
         <div className="container mx-auto px-6 py-3 flex items-center justify-between gap-4">
@@ -458,7 +458,7 @@ export default function Page() {
                     whileInView={{ opacity: 1, y: 0 }}
                     viewport={{ once: true, amount: 0.25 }}
                     transition={{ duration: 0.5, delay: i * 0.06 }}
-                    className="rounded-2xl border border-line bg-panel/35 p-6 backdrop-blur-sm hover:bg-panel/55 transition"
+                    className="rounded-2xl border border-line bg-panel/35 p-6 hover:bg-panel/55 transition"
                   >
                     <div className="flex items-start justify-between gap-4">
                       <div>
@@ -504,7 +504,7 @@ export default function Page() {
                   whileInView={{ opacity: 1, y: 0 }}
                   viewport={{ once: true, amount: 0.25 }}
                   transition={{ duration: 0.5, delay: i * 0.06 }}
-                  className="rounded-2xl border border-line bg-panel/35 p-6 backdrop-blur-sm hover:bg-panel/55 transition"
+                  className="rounded-2xl border border-line bg-panel/35 p-6 hover:bg-panel/55 transition"
                 >
                   <div className="flex items-start justify-between gap-4">
                     <div>
@@ -565,7 +565,7 @@ export default function Page() {
           <Section id="skills" eyebrow="Toolkit" title="Skills">
             <div className="grid gap-4">
               {skills.map((g) => (
-                <div key={g.label} className="rounded-2xl border border-line bg-panel/35 p-5">
+                <div key={g.label} className="rounded-2xl border border-line bg-panel/25 p-5">
                   <p className="text-sm font-medium">{g.label}</p>
                   <p className="mt-2 text-sm text-body">{g.items.join(", ")}</p>
                 </div>
@@ -576,7 +576,7 @@ export default function Page() {
           <Section id="education" eyebrow="Background" title="Education">
             <div className="space-y-4">
               {education.map((ed) => (
-                <div key={ed.institution} className="rounded-2xl border border-line bg-panel/35 p-5">
+                <div key={ed.institution} className="rounded-2xl border border-line bg-panel/25 p-5">
                   <div className="flex flex-wrap items-baseline justify-between gap-3">
                     <p className="text-sm font-medium">{ed.institution}</p>
                     <p className="text-xs text-neutral-500">{ed.dates}</p>
@@ -602,7 +602,7 @@ export default function Page() {
         <div className="mt-16">
           <Section id="now" eyebrow="What am I up to?" title="Now">
             <div className="grid gap-6 lg:grid-cols-2">
-              <div className="rounded-2xl border border-line bg-panel/35 p-6">
+              <div className="rounded-2xl border border-line bg-panel/25 p-6">
                 <p className="text-sm font-medium text-neutral-200">What I am reading</p>
                 <div className="mt-4 flex gap-4">
                   <div className="h-20 w-14 overflow-hidden rounded-xl border border-line bg-neutral-950/40">
@@ -628,7 +628,7 @@ export default function Page() {
                 </div>
               </div>
 
-              <div className="rounded-2xl border border-line bg-panel/35 p-6">
+              <div className="rounded-2xl border border-line bg-panel/25 p-6">
                 <p className="text-sm font-medium text-neutral-200">What I am listening to</p>
                 <NowListening />
                 <p className="mt-3 text-xs text-neutral-500">
@@ -641,7 +641,7 @@ export default function Page() {
 
         <div className="mt-16">
           <Section id="contact" eyebrow="Get in touch" title="Contact">
-            <div className="rounded-2xl border border-line bg-panel/35 p-6">
+            <div className="rounded-2xl border border-line bg-panel/25 p-6">
               <p className="text-sm text-body">
                 Best way to reach me is email. LinkedIn also works.
               </p>
