@@ -101,7 +101,7 @@ function TimelineChart({ data }: { data: DayStat[] }) {
       <path d={area} fill="rgba(253,224,71,0.07)" />
       <path d={line} fill="none" stroke="rgba(253,224,71,0.65)" strokeWidth="1.5" strokeLinejoin="round" />
       {pts.filter((p) => p.visits > 0).map((p, i) => (
-        <circle key={i} cx={p.x} cy={p.y} r="2.5" fill="#fde047" opacity="0.85" />
+        <circle key={i} cx={p.x} cy={p.y} r="2.5" className="fill-accent" opacity="0.85" />
       ))}
       {[0, Math.floor(filled.length / 2), filled.length - 1].map((i) => (
         <text key={i} x={pts[i].x} y={H - 5} textAnchor="middle" fontSize="9" fill="rgba(255,255,255,0.28)">{filled[i].day.slice(5)}</text>
