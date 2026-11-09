@@ -379,8 +379,8 @@ export default function Page() {
         >
           <p className="tracking-widest text-xs uppercase text-neutral-400">{profile.tagline}</p>
 
-          <div className="mt-3 grid gap-8 md:grid-cols-[minmax(0,1fr)_auto] md:items-stretch">
-            <div className="min-w-0">
+          <div className="mt-3 grid gap-8 md:grid-cols-[minmax(0,1fr)_clamp(11rem,26vw,22rem)] md:items-center">
+            <div className="min-w-0 order-2 md:order-1">
               <h1 className="text-4xl md:text-6xl font-semibold leading-tight">{profile.name}</h1>
 
               <p className="mt-5 text-lg md:text-xl text-neutral-300 leading-relaxed">{profile.bio[0]}</p>
@@ -391,14 +391,14 @@ export default function Page() {
               ))}
             </div>
 
-            <div className="flex justify-center md:justify-end md:translate-x-8 lg:translate-x-30">
-              <div className="relative aspect-square h-32 md:h-full md:max-h-[360px] rounded-full border border-yellow-300/50 bg-neutral-900/30 p-[2px] backdrop-blur-sm">
+            <div className="order-1 md:order-2 flex justify-center md:justify-end">
+              <div className="relative aspect-square w-36 sm:w-44 md:w-full rounded-full border border-yellow-300/50 bg-neutral-900/30 p-[2px] backdrop-blur-sm">
                 <div className="relative h-full w-full overflow-hidden rounded-full">
                   <Image
                     src={HEADSHOT_SRC}
                     alt={`${profile.name} headshot`}
                     fill
-                    sizes="(min-width: 768px) 360px, 128px"
+                    sizes="(min-width: 768px) 22rem, 11rem"
                     className="object-cover"
                     priority
                   />
@@ -406,31 +406,26 @@ export default function Page() {
               </div>
             </div>
           </div>
-        <div className="h-8 md:h-22" aria-hidden="true" />
 
-        <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_minmax(220px,360px)] md:items-start">
-          <div className="flex flex-wrap gap-3">
-              <a
-                href="#projects"
-                className="rounded-2xl border border-yellow-300/40 bg-yellow-300/10 px-5 py-2 text-yellow-100 hover:bg-yellow-300/15 transition"
-              >
-                Explore projects
-              </a>
-              <a
-                href={profile.resumePath}
-                className="rounded-2xl border border-neutral-800 bg-neutral-900/40 px-5 py-2 hover:bg-neutral-900/60 transition"
-              >
-                Open resume
-              </a>
-              <a
-                href={mailtoHref}
-                className="rounded-2xl border border-neutral-800 bg-neutral-900/40 px-5 py-2 hover:bg-neutral-900/60 transition"
-              >
-                Email me
-              </a>
-            </div>
-
-          <div className="hidden md:block" aria-hidden="true" />
+          <div className="mt-10 flex flex-wrap gap-3">
+            <a
+              href="#projects"
+              className="rounded-2xl border border-yellow-300/40 bg-yellow-300/10 px-5 py-2 text-yellow-100 hover:bg-yellow-300/15 transition"
+            >
+              Explore projects
+            </a>
+            <a
+              href={profile.resumePath}
+              className="rounded-2xl border border-neutral-800 bg-neutral-900/40 px-5 py-2 hover:bg-neutral-900/60 transition"
+            >
+              Open resume
+            </a>
+            <a
+              href={mailtoHref}
+              className="rounded-2xl border border-neutral-800 bg-neutral-900/40 px-5 py-2 hover:bg-neutral-900/60 transition"
+            >
+              Email me
+            </a>
           </div>
         </motion.header>
 
