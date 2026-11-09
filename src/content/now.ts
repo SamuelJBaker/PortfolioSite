@@ -7,7 +7,7 @@ export const now = {
     publisher: "Pushkin Press",
     published: "1895",
     binding: "Hardcover",
-    note: "“What a precious triple donkey I had made of myself!”",
+    note: "\u201cWhat a precious triple donkey I had made of myself!\u201d",
   },
   spotifyProfileUrl: "https://open.spotify.com/user/bobcat_908?si=ab7785689a6244c1",
 };

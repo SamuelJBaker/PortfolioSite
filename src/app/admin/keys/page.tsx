@@ -52,7 +52,7 @@ export default async function KeysPage() {
     <div>
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-semibold">Referral Keys</h1>
-        <a href="/admin/keys/new" className="rounded-xl border border-yellow-300/40 bg-yellow-300/10 px-4 py-2 text-sm text-yellow-100 hover:bg-yellow-300/15 transition">New key</a>
+        <a href="/admin/keys/new" className="rounded-xl border border-accent/45 bg-accent/10 px-4 py-2 text-sm text-accent-text hover:bg-accent/15 transition">New key</a>
       </div>
 
       {dbError && (
@@ -60,7 +60,7 @@ export default async function KeysPage() {
       )}
 
       {!dbError && keys.length === 0 && (
-        <p className="text-sm text-neutral-400">
+        <p className="text-sm text-muted">
           No keys yet. Create one to start tracking referral visits.
         </p>
       )}
@@ -69,7 +69,7 @@ export default async function KeysPage() {
         <div className="overflow-x-auto">
           <table className="w-full text-sm border-collapse">
             <thead>
-              <tr className="border-b border-neutral-800 text-neutral-400 text-left">
+              <tr className="border-b border-line text-muted text-left">
                 <th className="pb-3 pr-6 font-medium">Key</th>
                 <th className="pb-3 pr-6 font-medium">Company</th>
                 <th className="pb-3 pr-6 font-medium">Role</th>
@@ -79,11 +79,11 @@ export default async function KeysPage() {
                 <th className="pb-3 font-medium">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-neutral-900">
+            <tbody className="divide-y divide-panel">
               {keys.map((k) => (
-                <tr key={k.key} className="text-neutral-300">
+                <tr key={k.key} className="text-body">
                   <td className="py-3 pr-6 font-mono text-xs">
-                    <a href={"/v/" + k.key} target="_blank" rel="noreferrer" className="text-yellow-200/80 hover:text-yellow-200">/v/{k.key}</a>
+                    <a href={"/v/" + k.key} target="_blank" rel="noreferrer" className="text-accent/80 hover:text-accent">/v/{k.key}</a>
                   </td>
                   <td className="py-3 pr-6">{k.company ?? "-"}</td>
                   <td className="py-3 pr-6">{k.role ?? "-"}</td>
@@ -99,7 +99,7 @@ export default async function KeysPage() {
                       <form method="POST" action="/api/admin/keys" className="inline">
                         <input type="hidden" name="key" value={k.key} />
                         <input type="hidden" name="active" value={k.active ? "0" : "1"} />
-                        <button type="submit" className="text-xs text-neutral-500 hover:text-neutral-300 transition">
+                        <button type="submit" className="text-xs text-neutral-500 hover:text-body transition">
                           {k.active ? "Deactivate" : "Activate"}
                         </button>
                       </form>
@@ -108,7 +108,7 @@ export default async function KeysPage() {
                         <form method="POST" action="/api/admin/keys" className="inline">
                           <input type="hidden" name="key" value={k.key} />
                           <input type="hidden" name="mark_sent" value="1" />
-                          <button type="submit" className="text-xs text-yellow-300/60 hover:text-yellow-300 transition">
+                          <button type="submit" className="text-xs text-accent/60 hover:text-accent transition">
                             Mark sent
                           </button>
                         </form>
@@ -120,7 +120,7 @@ export default async function KeysPage() {
                         </span>
                       )}
 
-                      <span className="text-neutral-800">·</span>
+                      <span className="text-line">&middot;</span>
 
                       <DeleteKeyButton keyName={k.key} />
                     </div>

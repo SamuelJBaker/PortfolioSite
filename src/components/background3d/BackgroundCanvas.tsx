@@ -14,7 +14,7 @@ const INTRO_PULSE_DELAY_MS = 650;
 const INTRO_PULSE = { intensity: 0.55, durationMs: 850, mode: "system" as const };
 
 const IDLE_PULSE = { intensity: 0.55, durationMs: 1200, mode: "system" as const };
-const IDLE_PULSE_INTERVAL_MS = { base: 5000, jitter: 100 };
+const IDLE_PULSE_INTERVAL_MS = { base: 5000, jitter: 2500 };
 
 // Grid reactivity
 const GRID_Z = -1.55;
@@ -58,7 +58,7 @@ type PointGridProps = {
   color?: THREE.ColorRepresentation;
   opacity?: number;
   reactStrength?: number;
-  /** Reserved for future: mouse position in the grid plane's local XY. */
+  /** Cursor position in the grid plane's local XY; drives the bulge and brighten. */
   mouse?: THREE.Vector2;
 };
 
@@ -139,7 +139,7 @@ function PointGrid({
         uOpacity: { value: opacity },
         uPointSize: { value: pointSize },
 
-        // Reserved for future reactive motion.
+        // Reactive motion: time drives the shimmer, strength and mouse drive the bulge.
         uTime: { value: 0 },
         uReactStrength: { value: reactStrength },
         uMouse: { value: mouse ? mouse.clone() : new THREE.Vector2(999, 999) },
@@ -197,7 +197,7 @@ vertexShader: /* glsl */ `
           // Soft edge.
           float a = 1.0 - smoothstep(0.38, 0.5, r);
 
-          // Keep it static for now, but let future reactive motion brighten near the cursor.
+          // Brighten up to 25% near the cursor.
           float alpha = uOpacity * a * mix(1.0, 1.25, vFalloff);
           gl_FragColor = vec4(uColor, sat(alpha));
         }
@@ -384,10 +384,10 @@ export function BackgroundCanvas() {
           <ambientLight intensity={0.25} />
           <hemisphereLight
             intensity={0.55}
-            color={new THREE.Color("#e6e6ea")}
+            color={new THREE.Color("#c9d4f0")}
             groundColor={new THREE.Color("#0a0a0d")}
           />
-          <directionalLight position={[2.8, 2.6, 2.2]} intensity={1.55} />
+          <directionalLight position={[2.8, 2.6, 2.2]} intensity={1.55} color="#fff4dc" />
           <directionalLight position={[-2.2, -1.4, -1.8]} intensity={0.55} />
           <directionalLight position={[0.0, 2.2, -2.4]} intensity={0.35} />
 
@@ -405,7 +405,6 @@ export function BackgroundCanvas() {
               opacity={0.95}
               idleStrength={0.05}
               inferencePulse={pulse}
-              inferenceBaseOpacity={debug ? 0.12 : 0.06}
             />
           </BackgroundErrorBoundary>
         </Canvas>

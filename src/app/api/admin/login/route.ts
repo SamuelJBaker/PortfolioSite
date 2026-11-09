@@ -4,7 +4,7 @@ import bcrypt from "bcryptjs";
 const ADMIN_COOKIE = "sjb_admin_session";
 const COOKIE_MAX_AGE = 60 * 60 * 8; // 8 hours
 
-// ── Sign a payload with HMAC-SHA256, return hex string ───────────────────────
+// -- Sign a payload with HMAC-SHA256, return hex string -----------------------
 async function signPayload(payload: string, secret: string): Promise<string> {
   const encoder = new TextEncoder();
   const keyMaterial = await crypto.subtle.importKey(
@@ -25,7 +25,7 @@ async function signPayload(payload: string, secret: string): Promise<string> {
   return `${payload}.${hex}`;
 }
 
-// ── POST: validate password, set signed cookie ────────────────────────────────
+// -- POST: validate password, set signed cookie --------------------------------
 export async function POST(request: NextRequest) {
   try {
     const formData = await request.formData();
@@ -49,7 +49,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // bcrypt compare — works whether ADMIN_PASSWORD is a hash or plaintext
+    // bcrypt compare - works whether ADMIN_PASSWORD is a hash or plaintext
     // In production, store a bcrypt hash. For initial setup, a plaintext
     // comparison is fine temporarily.
     let valid = false;

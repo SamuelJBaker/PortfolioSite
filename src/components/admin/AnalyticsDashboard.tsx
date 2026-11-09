@@ -9,7 +9,7 @@ import type {
 } from "@/app/admin/analytics/page";
 import { countryName } from "@/lib/countries";
 
-// ── ISO numeric id -> alpha-2 (for matching world-atlas geo ids to Cloudflare country codes) ──
+// -- ISO numeric id -> alpha-2 (for matching world-atlas geo ids to Cloudflare country codes) --
 const N2A: Record<string, string> = {
   "004":"AF","008":"AL","012":"DZ","020":"AD","024":"AO","028":"AG","032":"AR",
   "036":"AU","040":"AT","031":"AZ","044":"BS","048":"BH","050":"BD","052":"BB",
@@ -49,7 +49,7 @@ type Props = {
   liveCount: number;
 };
 
-// ── Helpers ───────────────────────────────────────────────────────────────────
+// -- Helpers -------------------------------------------------------------------
 
 function fillTimeline(data: DayStat[], days = 30): DayStat[] {
   const map = new Map(data.map((d) => [d.day, d.visits]));
@@ -71,7 +71,7 @@ function groupKeyTimeline(rows: KeyDayStat[]): Map<string, DayStat[]> {
   return map;
 }
 
-// ── Timeline chart ────────────────────────────────────────────────────────────
+// -- Timeline chart ------------------------------------------------------------
 
 function TimelineChart({ data }: { data: DayStat[] }) {
   const filled = fillTimeline(data);
@@ -101,7 +101,7 @@ function TimelineChart({ data }: { data: DayStat[] }) {
       <path d={area} fill="rgba(253,224,71,0.07)" />
       <path d={line} fill="none" stroke="rgba(253,224,71,0.65)" strokeWidth="1.5" strokeLinejoin="round" />
       {pts.filter((p) => p.visits > 0).map((p, i) => (
-        <circle key={i} cx={p.x} cy={p.y} r="2.5" fill="#fde047" opacity="0.85" />
+        <circle key={i} cx={p.x} cy={p.y} r="2.5" className="fill-accent" opacity="0.85" />
       ))}
       {[0, Math.floor(filled.length / 2), filled.length - 1].map((i) => (
         <text key={i} x={pts[i].x} y={H - 5} textAnchor="middle" fontSize="9" fill="rgba(255,255,255,0.28)">{filled[i].day.slice(5)}</text>
@@ -110,7 +110,7 @@ function TimelineChart({ data }: { data: DayStat[] }) {
   );
 }
 
-// ── Sparkline (per-key 30-day bar chart) ──────────────────────────────────────
+// -- Sparkline (per-key 30-day bar chart) --------------------------------------
 
 function Sparkline({ data }: { data: DayStat[] }) {
   const filled = fillTimeline(data);
@@ -133,7 +133,7 @@ function Sparkline({ data }: { data: DayStat[] }) {
   );
 }
 
-// ── World map ─────────────────────────────────────────────────────────────────
+// -- World map -----------------------------------------------------------------
 
 function WorldMap({ countryStats }: { countryStats: CountryStat[] }) {
   const counts = new Map(countryStats.map((c) => [c.country, c.visits]));
@@ -208,12 +208,12 @@ function WorldMap({ countryStats }: { countryStats: CountryStat[] }) {
 
       {tooltip && (
         <div
-          className="pointer-events-none fixed z-50 rounded-xl border border-neutral-700 bg-neutral-900/95 px-3 py-2 text-xs text-neutral-100 shadow-xl"
+          className="pointer-events-none fixed z-50 rounded-xl border border-neutral-700 bg-panel/95 px-3 py-2 text-xs text-neutral-100 shadow-xl"
           style={{ left: tooltip.x + 12, top: tooltip.y - 36 }}
         >
           <span className="font-medium">{tooltip.name}</span>
           {tooltip.count > 0 && (
-            <span className="ml-2 text-yellow-300">{tooltip.count} visit{tooltip.count !== 1 ? "s" : ""}</span>
+            <span className="ml-2 text-accent">{tooltip.count} visit{tooltip.count !== 1 ? "s" : ""}</span>
           )}
         </div>
       )}
@@ -221,7 +221,7 @@ function WorldMap({ countryStats }: { countryStats: CountryStat[] }) {
   );
 }
 
-// ── Event breakdown ───────────────────────────────────────────────────────────
+// -- Event breakdown -----------------------------------------------------------
 
 function EventBreakdown({ stats }: { stats: EventStat[] }) {
   const total = stats.reduce((s, e) => s + e.count, 0);
@@ -231,13 +231,13 @@ function EventBreakdown({ stats }: { stats: EventStat[] }) {
       {stats.map((e) => (
         <div key={e.event}>
           <div className="flex items-center justify-between mb-1.5">
-            <span className="font-mono text-xs text-neutral-300">{e.event}</span>
-            <span className="text-xs text-neutral-400">
+            <span className="font-mono text-xs text-body">{e.event}</span>
+            <span className="text-xs text-muted">
               {e.count} <span className="text-neutral-600">({Math.round((e.count / total) * 100)}%)</span>
             </span>
           </div>
-          <div className="h-1.5 w-full rounded-full bg-neutral-800">
-            <div className="h-1.5 rounded-full bg-neutral-400/45 transition-all duration-700" style={{ width: `${(e.count / total) * 100}%` }} />
+          <div className="h-1.5 w-full rounded-full bg-line">
+            <div className="h-1.5 rounded-full bg-muted/45 transition-all duration-700" style={{ width: `${(e.count / total) * 100}%` }} />
           </div>
         </div>
       ))}
@@ -245,7 +245,7 @@ function EventBreakdown({ stats }: { stats: EventStat[] }) {
   );
 }
 
-// ── Key table ─────────────────────────────────────────────────────────────────
+// -- Key table -----------------------------------------------------------------
 
 function KeyTable({ stats }: { stats: KeyStat[] }) {
   if (stats.length === 0) return <p className="text-sm text-neutral-500">No data yet.</p>;
@@ -253,18 +253,18 @@ function KeyTable({ stats }: { stats: KeyStat[] }) {
     <div className="overflow-x-auto mt-4">
       <table className="w-full text-sm border-collapse">
         <thead>
-          <tr className="border-b border-neutral-800 text-neutral-400 text-left">
+          <tr className="border-b border-line text-muted text-left">
             <th className="pb-3 pr-6 font-medium">Key</th>
             <th className="pb-3 pr-6 font-medium">Visits</th>
             <th className="pb-3 font-medium">Last visit</th>
           </tr>
         </thead>
-        <tbody className="divide-y divide-neutral-900">
+        <tbody className="divide-y divide-panel">
           {stats.map((s) => (
-            <tr key={s.key} className="text-neutral-300">
-              <td className="py-3 pr-6 font-mono text-xs text-yellow-200/80">/v/{s.key}</td>
+            <tr key={s.key} className="text-body">
+              <td className="py-3 pr-6 font-mono text-xs text-accent/80">/v/{s.key}</td>
               <td className="py-3 pr-6">{s.visits}</td>
-              <td className="py-3 text-neutral-500 text-xs">{s.last_visit ? s.last_visit.slice(0, 16).replace("T", " ") : "—"}</td>
+              <td className="py-3 text-neutral-500 text-xs">{s.last_visit ? s.last_visit.slice(0, 16).replace("T", " ") : "\u2014"}</td>
             </tr>
           ))}
         </tbody>
@@ -273,7 +273,7 @@ function KeyTable({ stats }: { stats: KeyStat[] }) {
   );
 }
 
-// ── Main dashboard ────────────────────────────────────────────────────────────
+// -- Main dashboard ------------------------------------------------------------
 
 export function AnalyticsDashboard({ keyStats, timeline, eventStats, countryStats, keyTimeline, liveCount }: Props) {
   const router = useRouter();
@@ -304,20 +304,20 @@ export function AnalyticsDashboard({ keyStats, timeline, eventStats, countryStat
 
       {/* Stats row */}
       <div className="grid gap-4 sm:grid-cols-4 mb-8">
-        <div className="rounded-2xl border border-neutral-800 bg-neutral-900/35 p-5">
-          <p className="text-xs uppercase tracking-widest text-neutral-400">Referral visits</p>
+        <div className="rounded-2xl border border-line bg-panel/35 p-5">
+          <p className="text-xs uppercase tracking-widest text-muted">Referral visits</p>
           <p className="mt-2 text-3xl font-semibold">{totalVisits}</p>
         </div>
-        <div className="rounded-2xl border border-neutral-800 bg-neutral-900/35 p-5">
-          <p className="text-xs uppercase tracking-widest text-neutral-400">Active keys</p>
+        <div className="rounded-2xl border border-line bg-panel/35 p-5">
+          <p className="text-xs uppercase tracking-widest text-muted">Active keys</p>
           <p className="mt-2 text-3xl font-semibold">{activeKeys}</p>
         </div>
-        <div className="rounded-2xl border border-neutral-800 bg-neutral-900/35 p-5">
-          <p className="text-xs uppercase tracking-widest text-neutral-400">JS confirm rate</p>
-          <p className="mt-2 text-3xl font-semibold">{confirmRate !== null ? `${confirmRate}%` : "—"}</p>
+        <div className="rounded-2xl border border-line bg-panel/35 p-5">
+          <p className="text-xs uppercase tracking-widest text-muted">JS confirm rate</p>
+          <p className="mt-2 text-3xl font-semibold">{confirmRate !== null ? `${confirmRate}%` : "\u2014"}</p>
         </div>
-        <div className="rounded-2xl border border-neutral-800 bg-neutral-900/35 p-5">
-          <p className="text-xs uppercase tracking-widest text-neutral-400">Live now</p>
+        <div className="rounded-2xl border border-line bg-panel/35 p-5">
+          <p className="text-xs uppercase tracking-widest text-muted">Live now</p>
           <div className="mt-2 flex items-center gap-2">
             {liveCount > 0 ? (
               <>
@@ -335,13 +335,13 @@ export function AnalyticsDashboard({ keyStats, timeline, eventStats, countryStat
       </div>
 
       {/* Timeline */}
-      <div className="rounded-2xl border border-neutral-800 bg-neutral-900/35 p-6 mb-6">
-        <p className="text-sm font-medium mb-4">Visits — last 30 days</p>
+      <div className="rounded-2xl border border-line bg-panel/35 p-6 mb-6">
+        <p className="text-sm font-medium mb-4">Visits &mdash; last 30 days</p>
         <TimelineChart data={timeline} />
       </div>
 
       {/* World map */}
-      <div className="rounded-2xl border border-neutral-800 bg-neutral-900/35 p-6 mb-6">
+      <div className="rounded-2xl border border-line bg-panel/35 p-6 mb-6">
         <p className="text-sm font-medium mb-2">Visitors by country</p>
         {countryStats.length === 0 ? (
           <p className="text-sm text-neutral-500 mt-4">No country data yet.</p>
@@ -350,9 +350,9 @@ export function AnalyticsDashboard({ keyStats, timeline, eventStats, countryStat
             <WorldMap countryStats={countryStats} />
             <div className="mt-3 flex flex-wrap gap-2">
               {countryStats.slice(0, 8).map((c) => (
-  <span key={c.country} className="inline-flex items-center gap-1.5 rounded-full border border-neutral-800 bg-neutral-900/40 px-3 py-1 text-xs text-neutral-300">
+  <span key={c.country} className="inline-flex items-center gap-1.5 rounded-full border border-line bg-panel/40 px-3 py-1 text-xs text-body">
     <span>{countryName(c.country)}</span>
-    <span className="text-yellow-300/80">{c.visits}</span>
+    <span className="text-accent/80">{c.visits}</span>
   </span>
 ))}
             </div>
@@ -361,33 +361,33 @@ export function AnalyticsDashboard({ keyStats, timeline, eventStats, countryStat
       </div>
 
       {/* Per-key breakdown with sparklines */}
-      <div className="rounded-2xl border border-neutral-800 bg-neutral-900/35 p-6 mb-6">
-        <p className="text-sm font-medium mb-4">Visits by key — click to expand timeline</p>
+      <div className="rounded-2xl border border-line bg-panel/35 p-6 mb-6">
+        <p className="text-sm font-medium mb-4">Visits by key &mdash; click to expand timeline</p>
         {keyStats.length === 0 ? (
           <p className="text-sm text-neutral-500">No referral visits yet.</p>
         ) : (
           <div className="space-y-3">
             {keyStats.map((s) => (
-              <div key={s.key} className="rounded-xl border border-neutral-800/60 bg-neutral-950/20 p-4">
+              <div key={s.key} className="rounded-xl border border-line/60 bg-neutral-950/20 p-4">
                 <button
                   onClick={() => setExpandedKey(expandedKey === s.key ? null : s.key)}
                   className="w-full text-left"
                 >
                   <div className="flex items-center justify-between mb-2">
-                    <span className="font-mono text-xs text-neutral-300">/v/{s.key}</span>
+                    <span className="font-mono text-xs text-body">/v/{s.key}</span>
                     <div className="flex items-center gap-3">
-                      <span className="text-xs text-neutral-400">{s.visits} visit{s.visits !== 1 ? "s" : ""}</span>
-                      <span className="text-xs text-neutral-600">{expandedKey === s.key ? "▾" : "▸"}</span>
+                      <span className="text-xs text-muted">{s.visits} visit{s.visits !== 1 ? "s" : ""}</span>
+                      <span className="text-xs text-neutral-600">{expandedKey === s.key ? "\u25be" : "\u25b8"}</span>
                     </div>
                   </div>
-                  <div className="h-1.5 w-full rounded-full bg-neutral-800">
-                    <div className="h-1.5 rounded-full bg-yellow-300/60 transition-all duration-700" style={{ width: `${(s.visits / maxVisits) * 100}%` }} />
+                  <div className="h-1.5 w-full rounded-full bg-line">
+                    <div className="h-1.5 rounded-full bg-accent/60 transition-all duration-700" style={{ width: `${(s.visits / maxVisits) * 100}%` }} />
                   </div>
                 </button>
                 {expandedKey === s.key && (
-                  <div className="mt-1 border-t border-neutral-800/60 pt-3">
+                  <div className="mt-1 border-t border-line/60 pt-3">
                     <p className="text-xs text-neutral-500 mb-1">
-                      Last visit: {s.last_visit ? s.last_visit.slice(0, 16).replace("T", " ") : "—"}
+                      Last visit: {s.last_visit ? s.last_visit.slice(0, 16).replace("T", " ") : "\u2014"}
                     </p>
                     <Sparkline data={keyTimelineMap.get(s.key) ?? []} />
                   </div>
@@ -399,15 +399,15 @@ export function AnalyticsDashboard({ keyStats, timeline, eventStats, countryStat
       </div>
 
       {/* Event breakdown */}
-      <div className="rounded-2xl border border-neutral-800 bg-neutral-900/35 p-6 mb-6">
+      <div className="rounded-2xl border border-line bg-panel/35 p-6 mb-6">
         <p className="text-sm font-medium mb-4">Event breakdown</p>
         <EventBreakdown stats={eventStats} />
       </div>
 
       {/* Raw table */}
-      <div className="rounded-2xl border border-neutral-800 bg-neutral-900/35 p-6">
+      <div className="rounded-2xl border border-line bg-panel/35 p-6">
         <button onClick={() => setShowTable((v) => !v)} className="flex items-center gap-2 text-sm font-medium text-neutral-200 hover:text-white transition">
-          <span>{showTable ? "▾" : "▸"} Key details table</span>
+          <span>{showTable ? "\u25be" : "\u25b8"} Key details table</span>
         </button>
         {showTable && <KeyTable stats={keyStats} />}
       </div>

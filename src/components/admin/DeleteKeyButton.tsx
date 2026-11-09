@@ -22,7 +22,7 @@ export function DeleteKeyButton({ keyName }: { keyName: string }) {
         <button onClick={handleDelete} className="text-xs text-red-400 hover:text-red-300 transition">
           Confirm
         </button>
-        <button onClick={() => setConfirming(false)} className="text-xs text-neutral-500 hover:text-neutral-300 transition">
+        <button onClick={() => setConfirming(false)} className="text-xs text-neutral-500 hover:text-body transition">
           Cancel
         </button>
       </span>

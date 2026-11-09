@@ -63,7 +63,7 @@ export const projects: Project[] = [
     tags: ["Computer Vision", "OpenCV", "Express.js", "Docker"],
     highlights: [
       "Collaborated on a 5-member team to build a Dockerized full-stack parasite-screening app with HTML/CSS/JavaScript, Express.js, and Python/OpenCV, automating McMaster-slide analysis for sheep and goat samples.",
-      "Designed a feature-based CV pipeline using grayscale blur, thresholding, contour detection, and ellipse/shape-color matching to estimate eggs per gram under iPhone 6 and low-connectivity constraints, avoiding CNNs due to limited labeled data.",
+      "Designed a classical CV pipeline (blur, shifted modified-Otsu thresholding, contour and ellipse/shape-color matching) for mobile, low-connectivity use with too little labeled data for CNNs; classified every test sample correctly.",
       "Improved threshold selection from a fixed value to modified Otsu with a translational shift, enabling correct health-condition classification on all test samples while reducing testing cost and turnaround versus the manual McMaster workflow.",
     ],
     links: [{ label: "Read report (PDF)", href: "/papers/EggsByTheDozen.pdf" }],

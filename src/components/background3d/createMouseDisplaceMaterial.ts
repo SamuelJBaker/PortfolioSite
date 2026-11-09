@@ -17,6 +17,9 @@ export type MouseDisplaceUniforms = {
   uColor: { value: THREE.Color };
   uPulse: { value: number };
   uPulseColor: { value: THREE.Color };
+  uPulseColorAi: { value: THREE.Color };
+  uPulseColorSystem: { value: THREE.Color };
+  uPulseColorNeutral: { value: THREE.Color };
   uTime: { value: number };
   uIdleStrength: { value: number };
 };
@@ -27,8 +30,8 @@ export function createMouseDisplaceMaterial(
   options: MouseDisplaceMaterialOptions = {}
 ) {
   const {
-    color = "#f6e7c9",
-    pulseColor = "#f0d07a",
+    color = "#e8d9b0",
+    pulseColor = "#d4af5a",
     opacity = 0.45,
     radius = 0.6,
     strength = 0.35,
@@ -43,6 +46,10 @@ export function createMouseDisplaceMaterial(
     uColor: { value: new THREE.Color(color) },
     uPulse: { value: 0 },
     uPulseColor: { value: new THREE.Color(pulseColor) },
+    // Per-mode pulse colors; InteractiveModel copies the active one into uPulseColor each frame.
+    uPulseColorAi: { value: new THREE.Color("#d4af5a") },
+    uPulseColorSystem: { value: new THREE.Color("#c9d4f0") },
+    uPulseColorNeutral: { value: new THREE.Color("#7b7c84") },
     uTime: { value: 0 },
     uIdleStrength: { value: idleStrength },
   };
