@@ -17,11 +17,24 @@ export type InferencePulseState = {
   mode: InferencePulseMode;
 };
 
+/**
+ * Events on the effect bus. "pulse" mirrors every triggerInferencePulse call;
+ * "shader-mode" is reserved for callers that want to steer the wire color
+ * without pulsing (scene interface, console, dice).
+ */
+export type EffectEvent =
+  | { type: "pulse"; options?: InferencePulseOptions }
+  | { type: "shader-mode"; mode: InferencePulseMode };
+
+export type EffectListener = (event: EffectEvent) => void;
+
 type BackgroundEffectsContextValue = {
   pulse: InferencePulseState | null;
   idleEnabled: boolean;
   triggerInferencePulse: (options?: InferencePulseOptions) => void;
   setInferenceIdleEnabled: (enabled: boolean) => void;
+  emitEffect: (event: EffectEvent) => void;
+  subscribeEffect: (listener: EffectListener) => () => void;
 };
 
 const BackgroundEffectsContext =
@@ -42,6 +55,18 @@ export function BackgroundEffectsProvider({
   const [idleEnabled, setIdleEnabled] = React.useState(false);
 
   const clearTimerRef = React.useRef<number | null>(null);
+  const listenersRef = React.useRef(new Set<EffectListener>());
+
+  const emitEffect = React.useCallback((event: EffectEvent) => {
+    for (const listener of listenersRef.current) listener(event);
+  }, []);
+
+  const subscribeEffect = React.useCallback((listener: EffectListener) => {
+    listenersRef.current.add(listener);
+    return () => {
+      listenersRef.current.delete(listener);
+    };
+  }, []);
 
   const triggerInferencePulse = React.useCallback(
     (options: InferencePulseOptions = {}) => {
@@ -68,8 +93,10 @@ export function BackgroundEffectsProvider({
         setPulse(null);
         clearTimerRef.current = null;
       }, durationMs + 34);
+
+      emitEffect({ type: "pulse", options });
     },
-    []
+    [emitEffect]
   );
 
   React.useEffect(() => {
@@ -86,8 +113,10 @@ export function BackgroundEffectsProvider({
       idleEnabled,
       triggerInferencePulse,
       setInferenceIdleEnabled: setIdleEnabled,
+      emitEffect,
+      subscribeEffect,
     }),
-    [pulse, idleEnabled, triggerInferencePulse]
+    [pulse, idleEnabled, triggerInferencePulse, emitEffect, subscribeEffect]
   );
 
   return (

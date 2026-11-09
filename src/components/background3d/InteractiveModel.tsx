@@ -12,7 +12,8 @@ import {
 } from "./createMouseDisplaceMaterial";
 import { useFitToViewport } from "./useFitToViewport";
 import { useBackgroundEffects } from "./BackgroundEffectsProvider";
-import type { InferencePulseMode, InferencePulseState } from "./BackgroundEffectsProvider";
+import type { EffectEvent, InferencePulseMode, InferencePulseState } from "./BackgroundEffectsProvider";
+import { useEffectBus } from "./useEffectBus";
 
 type GLTF = {
   scene: THREE.Group;
@@ -159,6 +160,15 @@ export function InteractiveModel({
   inferencePulse = null,
 }: InteractiveModelProps) {
   const { triggerInferencePulse } = useBackgroundEffects();
+
+  // Effect bus: every pulse also arrives here as an event. Pulse rendering still
+  // follows the `inferencePulse` prop; the bus is the attachment point for
+  // later phases (scene interface, console, dice), so for now we only keep the
+  // most recent event.
+  const lastEffectRef = React.useRef<EffectEvent | null>(null);
+  useEffectBus((event) => {
+    lastEffectRef.current = event;
+  });
 
   const baseRef = React.useRef<THREE.Group | null>(null);
   const overlayRef = React.useRef<THREE.Group | null>(null);
