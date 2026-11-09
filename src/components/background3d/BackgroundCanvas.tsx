@@ -58,7 +58,7 @@ type PointGridProps = {
   color?: THREE.ColorRepresentation;
   opacity?: number;
   reactStrength?: number;
-  /** Reserved for future: mouse position in the grid plane's local XY. */
+  /** Cursor position in the grid plane's local XY; drives the bulge and brighten. */
   mouse?: THREE.Vector2;
 };
 
@@ -139,7 +139,7 @@ function PointGrid({
         uOpacity: { value: opacity },
         uPointSize: { value: pointSize },
 
-        // Reserved for future reactive motion.
+        // Reactive motion: time drives the shimmer, strength and mouse drive the bulge.
         uTime: { value: 0 },
         uReactStrength: { value: reactStrength },
         uMouse: { value: mouse ? mouse.clone() : new THREE.Vector2(999, 999) },
@@ -197,7 +197,7 @@ vertexShader: /* glsl */ `
           // Soft edge.
           float a = 1.0 - smoothstep(0.38, 0.5, r);
 
-          // Keep it static for now, but let future reactive motion brighten near the cursor.
+          // Brighten up to 25% near the cursor.
           float alpha = uOpacity * a * mix(1.0, 1.25, vFalloff);
           gl_FragColor = vec4(uColor, sat(alpha));
         }
@@ -405,7 +405,6 @@ export function BackgroundCanvas() {
               opacity={0.95}
               idleStrength={0.05}
               inferencePulse={pulse}
-              inferenceBaseOpacity={debug ? 0.12 : 0.06}
             />
           </BackgroundErrorBoundary>
         </Canvas>

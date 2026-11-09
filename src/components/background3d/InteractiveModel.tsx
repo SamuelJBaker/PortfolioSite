@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import * as THREE from "three";
-import type { BufferGeometry, Material, Matrix4, Mesh, Object3D } from "three";
+import type { BufferGeometry, Material, Mesh, Object3D } from "three";
 import { useFrame, useThree } from "@react-three/fiber";
 import { useGLTF } from "@react-three/drei";
 import {
@@ -31,11 +31,6 @@ const baseMaterial = new THREE.MeshStandardMaterial({
   emissiveIntensity: 0.9,
 });
 
-function computeRelativeTo(sourceWorld: THREE.Matrix4, targetWorld: THREE.Matrix4) {
-  const invTarget = new THREE.Matrix4().copy(targetWorld).invert();
-  return new THREE.Matrix4().multiplyMatrices(invTarget, sourceWorld);
-}
-
 function pulseColorFor(uniforms: MouseDisplaceUniforms, mode: InferencePulseMode) {
   if (mode === "system") return uniforms.uPulseColorSystem.value;
   if (mode === "neutral") return uniforms.uPulseColorNeutral.value;
@@ -63,8 +58,6 @@ type InteractiveModelProps = {
   debug?: boolean;
 
   inferencePulse?: InferencePulseState | null;
-  inferenceMode?: InferencePulseMode;
-  inferenceBaseOpacity?: number;
 };
 
 function useOverlayMaterial(options: {
@@ -96,53 +89,25 @@ function GlbLayer({
   url,
   material,
   onReady,
-  onGeometryReady,
 }: {
   url: string;
   material: Material;
   onReady?: () => void;
-  onGeometryReady?: (geometry: BufferGeometry, meshWorld: Matrix4) => void;
 }) {
   const gltf = useGLTF(url) as unknown as GLTF;
 
   const scene = React.useMemo<THREE.Group>(() => gltf.scene.clone(true) as THREE.Group, [gltf.scene]);
 
   React.useEffect(() => {
-    const candidateBox: { current: MeshWithGeom | null } = { current: null };
-    let bestScore = -Infinity;
-
-    const box = new THREE.Box3();
-    const size = new THREE.Vector3();
-
     scene.traverse((obj) => {
       if (!isMeshWithBufferGeometry(obj)) return;
-
-      const mesh = obj;
-      mesh.material = material;
-
-      const geom = mesh.geometry;
-      if (!geom.boundingBox) geom.computeBoundingBox();
-      if (!geom.boundingBox) return;
-
-      box.copy(geom.boundingBox);
-      const score = box.getSize(size).lengthSq();
-
-      if (score > bestScore) {
-        bestScore = score;
-        candidateBox.current = mesh;
-      }
+      obj.material = material;
     });
 
     onReady?.();
 
     scene.updateWorldMatrix(true, true);
-
-    const candidate = candidateBox.current;
-    if (!candidate) return;
-
-    candidate.updateWorldMatrix(true, false);
-    onGeometryReady?.(candidate.geometry, candidate.matrixWorld.clone());
-  }, [scene, material, onReady, onGeometryReady]);
+  }, [scene, material, onReady]);
 
   return <primitive object={scene} />;
 }
@@ -174,9 +139,6 @@ export function InteractiveModel({
   const baseRef = React.useRef<THREE.Group | null>(null);
   const overlayRef = React.useRef<THREE.Group | null>(null);
   const debugRef = React.useRef<THREE.Mesh | null>(null);
-
-  const ownedSourceGeometryRef = React.useRef<THREE.BufferGeometry | null>(null);
-  const [, setSourceGeometry] = React.useState<THREE.BufferGeometry | null>(null);
 
   const { rootRef, contentRef, fitScale, refit } = useFitToViewport({
     marginY: 0.1,
@@ -266,44 +228,6 @@ React.useEffect(() => {
     }
   });
 
-  const handleGlbGeometry = React.useCallback(
-    (geometry: THREE.BufferGeometry, meshWorld: THREE.Matrix4) => {
-      if (ownedSourceGeometryRef.current) {
-        ownedSourceGeometryRef.current.dispose();
-        ownedSourceGeometryRef.current = null;
-      }
-
-      const content = contentRef.current;
-      const cloned = geometry.clone();
-
-      if (content) {
-        content.updateWorldMatrix(true, false);
-        const rel = computeRelativeTo(meshWorld, content.matrixWorld);
-        cloned.applyMatrix4(rel);
-      }
-
-      cloned.computeBoundingBox();
-      cloned.computeBoundingSphere();
-
-      ownedSourceGeometryRef.current = cloned;
-      setSourceGeometry(cloned);
-    },
-    [contentRef]
-  );
-
-  React.useEffect(() => {
-    setSourceGeometry(null);
-  }, [modelUrl]);
-
-  React.useEffect(() => {
-    return () => {
-      if (ownedSourceGeometryRef.current) {
-        ownedSourceGeometryRef.current.dispose();
-        ownedSourceGeometryRef.current = null;
-      }
-    };
-  }, []);
-
   // No fallback geometry: avoid showing a "backup" model while the GLB loads.
   if (!modelUrl) return null;
 
@@ -311,12 +235,7 @@ React.useEffect(() => {
     <group ref={rootRef} scale={fitScale * modelScale}>
       <group ref={contentRef}>
         <group ref={baseRef}>
-          <GlbLayer
-            url={modelUrl}
-            material={baseMaterial}
-            onReady={refit}
-            onGeometryReady={handleGlbGeometry}
-          />
+          <GlbLayer url={modelUrl} material={baseMaterial} onReady={refit} />
         </group>
 
         <group ref={overlayRef}>
