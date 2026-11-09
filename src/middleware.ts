@@ -3,9 +3,9 @@ import { type NextRequest, NextResponse } from "next/server";
 // Cookie name for the admin session
 const ADMIN_COOKIE = "sjb_admin_session";
 
-// ── Simple HMAC signature verification ───────────────────────────────────────
+// -- Simple HMAC signature verification ---------------------------------------
 // Cookie value format: "{payload}.{hex-signature}"
-// Payload is just "admin" — single-user, no claims needed.
+// Payload is just "admin" - single-user, no claims needed.
 async function verifySignedCookie(
   value: string,
   secret: string
@@ -42,11 +42,11 @@ async function verifySignedCookie(
   }
 }
 
-// ── Middleware ────────────────────────────────────────────────────────────────
+// -- Middleware ----------------------------------------------------------------
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  // Only guard /admin routes — pass everything else through immediately
+  // Only guard /admin routes - pass everything else through immediately
   if (!pathname.startsWith("/admin")) {
     return NextResponse.next();
   }
@@ -73,7 +73,7 @@ export async function middleware(request: NextRequest) {
   const valid = await verifySignedCookie(cookie.value, cookieSecret);
 
   if (!valid) {
-    // Cookie present but invalid/tampered — redirect to login
+    // Cookie present but invalid/tampered - redirect to login
     const response = NextResponse.redirect(
       new URL("/admin/login", request.url)
     );
@@ -82,7 +82,7 @@ export async function middleware(request: NextRequest) {
     return response;
   }
 
-  // Valid session — allow through
+  // Valid session - allow through
   return NextResponse.next();
 }
 

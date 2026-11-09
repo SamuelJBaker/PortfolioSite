@@ -120,7 +120,7 @@ export default async function KeysPage() {
                         </span>
                       )}
 
-                      <span className="text-line">·</span>
+                      <span className="text-line">&middot;</span>
 
                       <DeleteKeyButton keyName={k.key} />
                     </div>

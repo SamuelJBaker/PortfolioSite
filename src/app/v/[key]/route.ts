@@ -1,17 +1,17 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { getCloudflareContext } from "@opennextjs/cloudflare";
 
-// ── Cloudflare env type ───────────────────────────────────────────────────────
+// -- Cloudflare env type -------------------------------------------------------
 interface CloudflareEnv {
   ANALYTICS_DB: D1Database;
   ANALYTICS_KV: KVNamespace;
 }
 
-// ── Tier classification ───────────────────────────────────────────────────────
-// Tier 1: referral link fired (key present)          — known context, high intent
-// Tier 2: came from LinkedIn                         — human, unknown context
-// Tier 3: came from ATS / resume tool                — mixed signal
-// Tier 4: everything else (direct, unknown)          — log silently
+// -- Tier classification -------------------------------------------------------
+// Tier 1: referral link fired (key present)          - known context, high intent
+// Tier 2: came from LinkedIn                         - human, unknown context
+// Tier 3: came from ATS / resume tool                - mixed signal
+// Tier 4: everything else (direct, unknown)          - log silently
 
 const ATS_PATTERNS = [
   "greenhouse.io",
@@ -31,7 +31,7 @@ function classifyTier(referer: string | null, hasKey: boolean): number {
   return 4;
 }
 
-// ── IP hashing ────────────────────────────────────────────────────────────────
+// -- IP hashing ----------------------------------------------------------------
 // Never store raw IPs. SHA-256, keep first 8 hex chars only.
 async function hashIp(ip: string): Promise<string> {
   const encoded = new TextEncoder().encode(ip);
@@ -42,7 +42,7 @@ async function hashIp(ip: string): Promise<string> {
   return hex.slice(0, 8);
 }
 
-// ── Route handler ─────────────────────────────────────────────────────────────
+// -- Route handler -------------------------------------------------------------
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ key: string }> }
@@ -66,7 +66,7 @@ export async function GET(
       return NextResponse.redirect(redirectTo, { status: 302 });
     }
 
-    // ── Check key exists and is active ───────────────────────────────────────
+    // -- Check key exists and is active ---------------------------------------
     const keyRow = await db
       .prepare("SELECT key, label FROM referral_keys WHERE key = ? AND active = 1")
       .bind(normalizedKey)
@@ -76,7 +76,7 @@ export async function GET(
     // see probing attempts, but don't associate an invalid key with the event.
     const validKey = keyRow !== null;
 
-    // ── Gather request metadata ───────────────────────────────────────────────
+    // -- Gather request metadata -----------------------------------------------
     const cf = (request as unknown as { cf?: Record<string, unknown> }).cf ?? {};
     const country = (cf["country"] as string | undefined) || null;
     const city = (cf["city"] as string | undefined) || null;
@@ -91,8 +91,8 @@ export async function GET(
 
     const tier = classifyTier(referer, validKey);
 
-    // ── KV deduplication: first-open detection ────────────────────────────────
-    // Key: "visit:{key}:{ipHash}" — expires after 24 hours.
+    // -- KV deduplication: first-open detection --------------------------------
+    // Key: "visit:{key}:{ipHash}" - expires after 24 hours.
     // Lets us flag whether a given referral key was opened multiple times
     // from the same hashed IP (e.g. hiring manager opens the link twice).
     const dedupKey = `visit:${normalizedKey}:${ipHash}`;
@@ -105,12 +105,12 @@ export async function GET(
       });
     }
 
-    // ── Generate a session ID for this server-side hit ────────────────────────
+    // -- Generate a session ID for this server-side hit ------------------------
     // Passed to the client via redirect query param so the beacon can use the
     // same session ID, correlating server and client events in D1.
     const serverSessionId = crypto.randomUUID();
 
-    // ── Write visit_server event to D1 ───────────────────────────────────────
+    // -- Write visit_server event to D1 ---------------------------------------
     await db
       .prepare(`
         INSERT INTO events
@@ -132,7 +132,7 @@ export async function GET(
       )
       .run();
 
-    // ── Redirect to homepage with session correlation params ──────────────────
+    // -- Redirect to homepage with session correlation params ------------------
     // The client beacon reads __sid on load and uses it as its session ID so
     // server and client events share the same session_id in D1.
     redirectTo.searchParams.set("__sid", serverSessionId);

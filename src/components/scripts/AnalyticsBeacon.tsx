@@ -2,7 +2,7 @@
 
 import * as React from "react";
 
-// ── Types ─────────────────────────────────────────────────────────────────────
+// -- Types ---------------------------------------------------------------------
 interface BeaconPayload {
   sessionId: string;
   event: string;
@@ -10,7 +10,7 @@ interface BeaconPayload {
   payload?: Record<string, unknown>;
 }
 
-// ── Constants ─────────────────────────────────────────────────────────────────
+// -- Constants -----------------------------------------------------------------
 const SESSION_KEY = "sjb_sid";
 const SESSION_KEY_REF = "sjb_key";
 
@@ -23,7 +23,7 @@ const MIN_DWELL_MS = 2000;
 // Section IDs to observe for dwell tracking
 const TRACKED_SECTIONS = ["experience", "projects", "skills", "resume", "now", "contact"];
 
-// ── Fire-and-forget beacon send ───────────────────────────────────────────────
+// -- Fire-and-forget beacon send -----------------------------------------------
 // Never throws. All analytics failures are silent.
 function sendBeacon(data: BeaconPayload): void {
   try {
@@ -54,7 +54,7 @@ function sendBeacon(data: BeaconPayload): void {
   }
 }
 
-// ── Session ID resolution ─────────────────────────────────────────────────────
+// -- Session ID resolution -----------------------------------------------------
 // Priority: URL __sid param (set by /v/[key] redirect) > existing sessionStorage > new UUID
 function resolveSessionId(): string {
   try {
@@ -83,12 +83,12 @@ function resolveSessionId(): string {
     sessionStorage.setItem(SESSION_KEY, newId);
     return newId;
   } catch {
-    // sessionStorage unavailable (private mode, etc.) — use a throwaway ID
+    // sessionStorage unavailable (private mode, etc.) - use a throwaway ID
     return crypto.randomUUID();
   }
 }
 
-// ── Referral key resolution ───────────────────────────────────────────────────
+// -- Referral key resolution ---------------------------------------------------
 function resolveKey(): string | undefined {
   try {
     const urlParams = new URLSearchParams(window.location.search);
@@ -103,7 +103,7 @@ function resolveKey(): string | undefined {
   }
 }
 
-// ── Main component ────────────────────────────────────────────────────────────
+// -- Main component ------------------------------------------------------------
 export function AnalyticsBeacon() {
   const sessionIdRef = React.useRef<string | null>(null);
   const keyRef = React.useRef<string | undefined>(undefined);
@@ -113,14 +113,14 @@ export function AnalyticsBeacon() {
   const sectionDwellFired = React.useRef<Set<string>>(new Set());
 
   React.useEffect(() => {
-    // ── Resolve session identity ──────────────────────────────────────────────
+    // -- Resolve session identity ----------------------------------------------
     const sessionId = resolveSessionId();
     const key = resolveKey();
     sessionIdRef.current = sessionId;
     keyRef.current = key;
     startTimeRef.current = Date.now();
 
-    // ── visit_confirmed: only once per session, not on every reload ───────────
+    // -- visit_confirmed: only once per session, not on every reload -----------
     const CONFIRMED_KEY = "sjb_confirmed";
     const alreadyConfirmed = sessionStorage.getItem(CONFIRMED_KEY) === sessionId;
     if (!alreadyConfirmed) {
@@ -128,7 +128,7 @@ export function AnalyticsBeacon() {
       try { sessionStorage.setItem(CONFIRMED_KEY, sessionId); } catch {}
     }
 
-    // ── scroll_depth: fire once per checkpoint ────────────────────────────────
+    // -- scroll_depth: fire once per checkpoint --------------------------------
     const handleScroll = () => {
       const scrollTop = window.scrollY;
       const docHeight =
@@ -152,7 +152,7 @@ export function AnalyticsBeacon() {
 
     window.addEventListener("scroll", handleScroll, { passive: true });
 
-    // ── section_dwell: IntersectionObserver per tracked section ───────────────
+    // -- section_dwell: IntersectionObserver per tracked section ---------------
     const observer = new IntersectionObserver(
       (entries) => {
         for (const entry of entries) {
@@ -160,10 +160,10 @@ export function AnalyticsBeacon() {
           if (!sectionId) continue;
 
           if (entry.isIntersecting) {
-            // Section entered viewport — record entry time
+            // Section entered viewport - record entry time
             sectionEntryTimes.current.set(sectionId, Date.now());
           } else {
-            // Section left viewport — compute dwell time
+            // Section left viewport - compute dwell time
             const entryTime = sectionEntryTimes.current.get(sectionId);
             if (entryTime == null) continue;
 
@@ -191,7 +191,7 @@ export function AnalyticsBeacon() {
       if (el) observer.observe(el);
     }
 
-    // ── link_click: event delegation on document ──────────────────────────────
+    // -- link_click: event delegation on document ------------------------------
     const handleClick = (e: MouseEvent) => {
       const target = (e.target as HTMLElement).closest("a");
       if (!target) return;
@@ -199,7 +199,7 @@ export function AnalyticsBeacon() {
       const href = target.getAttribute("href") ?? "";
       const label = (target.textContent ?? "").trim().slice(0, 128);
 
-      // Only log external links and named anchor links — skip internal nav
+      // Only log external links and named anchor links - skip internal nav
       const isExternal = href.startsWith("http");
       const isAnchor = href.startsWith("#");
       const isFile = href.includes(".pdf");
@@ -216,7 +216,7 @@ export function AnalyticsBeacon() {
 
     document.addEventListener("click", handleClick);
 
-    // ── session_end: pagehide fires reliably on tab close / navigation ────────
+    // -- session_end: pagehide fires reliably on tab close / navigation --------
 const handlePageHide = () => {
   const ENDED_KEY = "sjb_ended";
   try {
@@ -248,7 +248,7 @@ const handlePageHide = () => {
 
     window.addEventListener("pagehide", handlePageHide);
 
-    // ── Cleanup ───────────────────────────────────────────────────────────────
+    // -- Cleanup ---------------------------------------------------------------
     return () => {
       window.removeEventListener("scroll", handleScroll);
       window.removeEventListener("pagehide", handlePageHide);
@@ -257,6 +257,6 @@ const handlePageHide = () => {
     };
   }, []); // Runs once on mount
 
-  // Renders nothing — purely a side-effect component
+  // Renders nothing - purely a side-effect component
   return null;
 }

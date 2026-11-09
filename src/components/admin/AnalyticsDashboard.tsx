@@ -9,7 +9,7 @@ import type {
 } from "@/app/admin/analytics/page";
 import { countryName } from "@/lib/countries";
 
-// ── ISO numeric id -> alpha-2 (for matching world-atlas geo ids to Cloudflare country codes) ──
+// -- ISO numeric id -> alpha-2 (for matching world-atlas geo ids to Cloudflare country codes) --
 const N2A: Record<string, string> = {
   "004":"AF","008":"AL","012":"DZ","020":"AD","024":"AO","028":"AG","032":"AR",
   "036":"AU","040":"AT","031":"AZ","044":"BS","048":"BH","050":"BD","052":"BB",
@@ -49,7 +49,7 @@ type Props = {
   liveCount: number;
 };
 
-// ── Helpers ───────────────────────────────────────────────────────────────────
+// -- Helpers -------------------------------------------------------------------
 
 function fillTimeline(data: DayStat[], days = 30): DayStat[] {
   const map = new Map(data.map((d) => [d.day, d.visits]));
@@ -71,7 +71,7 @@ function groupKeyTimeline(rows: KeyDayStat[]): Map<string, DayStat[]> {
   return map;
 }
 
-// ── Timeline chart ────────────────────────────────────────────────────────────
+// -- Timeline chart ------------------------------------------------------------
 
 function TimelineChart({ data }: { data: DayStat[] }) {
   const filled = fillTimeline(data);
@@ -110,7 +110,7 @@ function TimelineChart({ data }: { data: DayStat[] }) {
   );
 }
 
-// ── Sparkline (per-key 30-day bar chart) ──────────────────────────────────────
+// -- Sparkline (per-key 30-day bar chart) --------------------------------------
 
 function Sparkline({ data }: { data: DayStat[] }) {
   const filled = fillTimeline(data);
@@ -133,7 +133,7 @@ function Sparkline({ data }: { data: DayStat[] }) {
   );
 }
 
-// ── World map ─────────────────────────────────────────────────────────────────
+// -- World map -----------------------------------------------------------------
 
 function WorldMap({ countryStats }: { countryStats: CountryStat[] }) {
   const counts = new Map(countryStats.map((c) => [c.country, c.visits]));
@@ -221,7 +221,7 @@ function WorldMap({ countryStats }: { countryStats: CountryStat[] }) {
   );
 }
 
-// ── Event breakdown ───────────────────────────────────────────────────────────
+// -- Event breakdown -----------------------------------------------------------
 
 function EventBreakdown({ stats }: { stats: EventStat[] }) {
   const total = stats.reduce((s, e) => s + e.count, 0);
@@ -245,7 +245,7 @@ function EventBreakdown({ stats }: { stats: EventStat[] }) {
   );
 }
 
-// ── Key table ─────────────────────────────────────────────────────────────────
+// -- Key table -----------------------------------------------------------------
 
 function KeyTable({ stats }: { stats: KeyStat[] }) {
   if (stats.length === 0) return <p className="text-sm text-neutral-500">No data yet.</p>;
@@ -264,7 +264,7 @@ function KeyTable({ stats }: { stats: KeyStat[] }) {
             <tr key={s.key} className="text-body">
               <td className="py-3 pr-6 font-mono text-xs text-accent/80">/v/{s.key}</td>
               <td className="py-3 pr-6">{s.visits}</td>
-              <td className="py-3 text-neutral-500 text-xs">{s.last_visit ? s.last_visit.slice(0, 16).replace("T", " ") : "—"}</td>
+              <td className="py-3 text-neutral-500 text-xs">{s.last_visit ? s.last_visit.slice(0, 16).replace("T", " ") : "\u2014"}</td>
             </tr>
           ))}
         </tbody>
@@ -273,7 +273,7 @@ function KeyTable({ stats }: { stats: KeyStat[] }) {
   );
 }
 
-// ── Main dashboard ────────────────────────────────────────────────────────────
+// -- Main dashboard ------------------------------------------------------------
 
 export function AnalyticsDashboard({ keyStats, timeline, eventStats, countryStats, keyTimeline, liveCount }: Props) {
   const router = useRouter();
@@ -314,7 +314,7 @@ export function AnalyticsDashboard({ keyStats, timeline, eventStats, countryStat
         </div>
         <div className="rounded-2xl border border-line bg-panel/35 p-5">
           <p className="text-xs uppercase tracking-widest text-muted">JS confirm rate</p>
-          <p className="mt-2 text-3xl font-semibold">{confirmRate !== null ? `${confirmRate}%` : "—"}</p>
+          <p className="mt-2 text-3xl font-semibold">{confirmRate !== null ? `${confirmRate}%` : "\u2014"}</p>
         </div>
         <div className="rounded-2xl border border-line bg-panel/35 p-5">
           <p className="text-xs uppercase tracking-widest text-muted">Live now</p>
@@ -336,7 +336,7 @@ export function AnalyticsDashboard({ keyStats, timeline, eventStats, countryStat
 
       {/* Timeline */}
       <div className="rounded-2xl border border-line bg-panel/35 p-6 mb-6">
-        <p className="text-sm font-medium mb-4">Visits — last 30 days</p>
+        <p className="text-sm font-medium mb-4">Visits &mdash; last 30 days</p>
         <TimelineChart data={timeline} />
       </div>
 
@@ -362,7 +362,7 @@ export function AnalyticsDashboard({ keyStats, timeline, eventStats, countryStat
 
       {/* Per-key breakdown with sparklines */}
       <div className="rounded-2xl border border-line bg-panel/35 p-6 mb-6">
-        <p className="text-sm font-medium mb-4">Visits by key — click to expand timeline</p>
+        <p className="text-sm font-medium mb-4">Visits by key &mdash; click to expand timeline</p>
         {keyStats.length === 0 ? (
           <p className="text-sm text-neutral-500">No referral visits yet.</p>
         ) : (
@@ -377,7 +377,7 @@ export function AnalyticsDashboard({ keyStats, timeline, eventStats, countryStat
                     <span className="font-mono text-xs text-body">/v/{s.key}</span>
                     <div className="flex items-center gap-3">
                       <span className="text-xs text-muted">{s.visits} visit{s.visits !== 1 ? "s" : ""}</span>
-                      <span className="text-xs text-neutral-600">{expandedKey === s.key ? "▾" : "▸"}</span>
+                      <span className="text-xs text-neutral-600">{expandedKey === s.key ? "\u25be" : "\u25b8"}</span>
                     </div>
                   </div>
                   <div className="h-1.5 w-full rounded-full bg-line">
@@ -387,7 +387,7 @@ export function AnalyticsDashboard({ keyStats, timeline, eventStats, countryStat
                 {expandedKey === s.key && (
                   <div className="mt-1 border-t border-line/60 pt-3">
                     <p className="text-xs text-neutral-500 mb-1">
-                      Last visit: {s.last_visit ? s.last_visit.slice(0, 16).replace("T", " ") : "—"}
+                      Last visit: {s.last_visit ? s.last_visit.slice(0, 16).replace("T", " ") : "\u2014"}
                     </p>
                     <Sparkline data={keyTimelineMap.get(s.key) ?? []} />
                   </div>
@@ -407,7 +407,7 @@ export function AnalyticsDashboard({ keyStats, timeline, eventStats, countryStat
       {/* Raw table */}
       <div className="rounded-2xl border border-line bg-panel/35 p-6">
         <button onClick={() => setShowTable((v) => !v)} className="flex items-center gap-2 text-sm font-medium text-neutral-200 hover:text-white transition">
-          <span>{showTable ? "▾" : "▸"} Key details table</span>
+          <span>{showTable ? "\u25be" : "\u25b8"} Key details table</span>
         </button>
         {showTable && <KeyTable stats={keyStats} />}
       </div>

@@ -69,7 +69,7 @@ export default function NewKeyPage() {
     className="h-4 w-4 rounded border border-neutral-700 bg-panel accent-accent"
   />
   <label htmlFor="mark_sent" className="text-sm text-body">
-    Mark as sent now — stamps sent_at with current time
+    Mark as sent now - stamps sent_at with current time
   </label>
 </div>
         <button type="submit" className="rounded-xl border border-accent/45 bg-accent/10 px-5 py-2 text-sm text-accent-text hover:bg-accent/15 transition">

@@ -25,7 +25,7 @@ export function NowListening() {
     async function run() {
       try {
         setState((prev) =>
-          prev.status === "ready" ? prev : { ...prev, status: "loading", text: "Loading now playing…" }
+          prev.status === "ready" ? prev : { ...prev, status: "loading", text: "Loading now playing\u2026" }
         );
 
         const res = await fetch("/api/now-playing", { cache: "no-store" });
