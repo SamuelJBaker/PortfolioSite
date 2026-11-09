@@ -375,12 +375,12 @@ export default function Page() {
           initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8 }}
-          className="max-w-5xl"
+          className="w-full"
         >
           <p className="tracking-widest text-xs uppercase text-neutral-400">{profile.tagline}</p>
 
           <div className="mt-3 grid gap-8 md:grid-cols-[minmax(0,1fr)_clamp(11rem,26vw,22rem)] md:items-center">
-            <div className="min-w-0 order-2 md:order-1">
+            <div className="min-w-0 max-w-2xl order-2 md:order-1">
               <h1 className="text-4xl md:text-6xl font-semibold leading-tight">{profile.name}</h1>
 
               <p className="mt-5 text-lg md:text-xl text-neutral-300 leading-relaxed">{profile.bio[0]}</p>
@@ -391,7 +391,7 @@ export default function Page() {
               ))}
             </div>
 
-            <div className="order-1 md:order-2 flex justify-center md:justify-end">
+            <div className="order-1 md:order-2 flex justify-center md:justify-end md:pr-4">
               <div className="relative aspect-square w-36 sm:w-44 md:w-full rounded-full border border-yellow-300/50 bg-neutral-900/30 p-[2px] backdrop-blur-sm">
                 <div className="relative h-full w-full overflow-hidden rounded-full">
                   <Image
