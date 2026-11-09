@@ -34,6 +34,12 @@ function computeRelativeTo(sourceWorld: THREE.Matrix4, targetWorld: THREE.Matrix
   return new THREE.Matrix4().multiplyMatrices(invTarget, sourceWorld);
 }
 
+function pulseColorFor(uniforms: MouseDisplaceUniforms, mode: InferencePulseMode) {
+  if (mode === "system") return uniforms.uPulseColorSystem.value;
+  if (mode === "neutral") return uniforms.uPulseColorNeutral.value;
+  return uniforms.uPulseColorAi.value;
+}
+
 function pulseEnvelope(progress01: number) {
   const t = Math.min(Math.max(progress01, 0), 1);
   const attack = Math.min(t / 0.18, 1);
@@ -213,7 +219,7 @@ React.useEffect(() => {
 
     uniforms.uTime.value += delta;
 
-    // Drive the pulse on the wireframe overlay.
+    // Drive the pulse on the wireframe overlay; the color follows the pulse mode.
     let p = 0;
     if (inferencePulse) {
       const now = performance.now();
@@ -221,6 +227,7 @@ React.useEffect(() => {
       if (elapsed >= 0 && elapsed <= inferencePulse.durationMs) {
         p = pulseEnvelope(elapsed / inferencePulse.durationMs) * inferencePulse.intensity;
       }
+      uniforms.uPulseColor.value.copy(pulseColorFor(uniforms, inferencePulse.mode));
     }
     uniforms.uPulse.value = p;
 
