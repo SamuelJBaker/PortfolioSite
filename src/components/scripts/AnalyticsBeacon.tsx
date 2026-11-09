@@ -21,7 +21,7 @@ const SCROLL_CHECKPOINTS = [25, 50, 75, 100] as const;
 const MIN_DWELL_MS = 2000;
 
 // Section IDs to observe for dwell tracking
-const TRACKED_SECTIONS = ["projects", "skills", "resume", "now", "contact"];
+const TRACKED_SECTIONS = ["experience", "projects", "skills", "resume", "now", "contact"];
 
 // ── Fire-and-forget beacon send ───────────────────────────────────────────────
 // Never throws. All analytics failures are silent.

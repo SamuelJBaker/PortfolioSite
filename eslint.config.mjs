@@ -33,10 +33,6 @@ const eslintConfig = [
     ],
     rules: { "@typescript-eslint/no-explicit-any": "warn" },
   },
-  {
-    files: ["src/app/page.tsx"],
-    rules: { "prefer-const": "warn" },
-  },
 ];
 
 export default eslintConfig;
