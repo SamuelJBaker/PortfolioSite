@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import type { Viewport } from "next";
 import "./globals.css";
 import { BackgroundCanvas } from "../components/background3d/BackgroundCanvas";
+import { BackgroundErrorBoundary } from "../components/background3d/BackgroundErrorBoundary";
 import { BackgroundEffectsProvider } from "../components/background3d/BackgroundEffectsProvider";
 import { AnalyticsBeacon } from "../components/scripts/AnalyticsBeacon";
 import { profile } from "../content/profile";
@@ -81,8 +82,10 @@ const prepaintStyle: React.CSSProperties = {
         />
 
         <BackgroundEffectsProvider>
-          {/* Canvas sits above the dot grid */}
-          <BackgroundCanvas />
+          {/* Canvas sits above the dot grid. Decorative only: if it fails, drop it and keep the page. */}
+          <BackgroundErrorBoundary label="background canvas">
+            <BackgroundCanvas />
+          </BackgroundErrorBoundary>
           {/* Foreground content */}
 <div className="relative z-20" data-ui>
   {children}

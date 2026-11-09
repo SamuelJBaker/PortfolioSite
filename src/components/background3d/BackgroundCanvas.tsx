@@ -4,6 +4,7 @@ import * as React from "react";
 import * as THREE from "three";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { InteractiveModel } from "./InteractiveModel";
+import { BackgroundErrorBoundary } from "./BackgroundErrorBoundary";
 import { useBackgroundEffects } from "./BackgroundEffectsProvider";
 
 const MODEL_PATH = "/models/hero.glb";
@@ -390,20 +391,23 @@ export function BackgroundCanvas() {
           <directionalLight position={[-2.2, -1.4, -1.8]} intensity={0.55} />
           <directionalLight position={[0.0, 2.2, -2.4]} intensity={0.35} />
 
-          <InteractiveModel
-            modelUrl={MODEL_PATH}
-            modelScale={1}
-            reducedMotion={reducedMotion}
-            touchOnly={touchOnly}
-            hasPointer={hasPointer}
-            debug={debug}
-            radius={.4}
-            strength={0.9}
-            opacity={0.95}
-            idleStrength={0.05}
-            inferencePulse={pulse}
-            inferenceBaseOpacity={debug ? 0.12 : 0.06}
-          />
+          {/* A failed model fetch should leave the point grid up, not blank the page. */}
+          <BackgroundErrorBoundary label="hero model">
+            <InteractiveModel
+              modelUrl={MODEL_PATH}
+              modelScale={1}
+              reducedMotion={reducedMotion}
+              touchOnly={touchOnly}
+              hasPointer={hasPointer}
+              debug={debug}
+              radius={.4}
+              strength={0.9}
+              opacity={0.95}
+              idleStrength={0.05}
+              inferencePulse={pulse}
+              inferenceBaseOpacity={debug ? 0.12 : 0.06}
+            />
+          </BackgroundErrorBoundary>
         </Canvas>
       </div>
     </div>
