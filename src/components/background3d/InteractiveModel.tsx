@@ -14,6 +14,7 @@ import { useFitToViewport } from "./useFitToViewport";
 import { useBackgroundEffects } from "./BackgroundEffectsProvider";
 import type { EffectEvent, InferencePulseMode, InferencePulseState } from "./BackgroundEffectsProvider";
 import { useEffectBus } from "./useEffectBus";
+import { tap } from "../../lib/haptics";
 
 type GLTF = {
   scene: THREE.Group;
@@ -209,6 +210,7 @@ React.useEffect(() => {
       return;
     }
 
+    tap();
     triggerInferencePulse({ intensity: 0.95, durationMs: 900, mode: "ai" });
   };
 
@@ -220,16 +222,9 @@ React.useEffect(() => {
     const uniforms = overlayMaterial.uniforms as MouseDisplaceUniforms;
     const disableMotion = reducedMotion || touchOnly;
 
-    if (disableMotion) {
-      uniforms.uStrength.value = 0;
-      uniforms.uIdleStrength.value = 0;
-      uniforms.uMouse.value.copy(FAR_POINT);
-      return;
-    }
-
-    uniforms.uTime.value += delta;
-
     // Drive the pulse on the wireframe overlay; the color follows the pulse mode.
+    // Written before the motion gate so taps and idle pulses render on touch
+    // devices, where hover displacement and idle wobble stay off.
     let p = 0;
     if (inferencePulse) {
       const now = performance.now();
@@ -240,6 +235,15 @@ React.useEffect(() => {
       uniforms.uPulseColor.value.copy(pulseColorFor(uniforms, inferencePulse.mode));
     }
     uniforms.uPulse.value = p;
+
+    if (disableMotion) {
+      uniforms.uStrength.value = 0;
+      uniforms.uIdleStrength.value = 0;
+      uniforms.uMouse.value.copy(FAR_POINT);
+      return;
+    }
+
+    uniforms.uTime.value += delta;
 
     uniforms.uStrength.value = strength;
     uniforms.uIdleStrength.value = idleStrength;
