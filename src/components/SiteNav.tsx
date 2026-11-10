@@ -24,6 +24,7 @@ const links = [
   { href: "/#resume", label: "Resume" },
   { href: "/#now", label: "Now" },
   { href: "/#contact", label: "Contact" },
+  { href: "/uses", label: "Uses" },
 ];
 
 const MENU_ID = "site-nav-menu";

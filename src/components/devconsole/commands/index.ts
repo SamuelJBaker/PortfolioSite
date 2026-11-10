@@ -8,6 +8,7 @@ import "./history";
 import "./ls";
 import "./open";
 import "./whoami";
+import "./uses";
 import "./goto";
 import "./roll";
 import "./seed";
