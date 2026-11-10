@@ -7,7 +7,9 @@ import { InteractiveModel } from "../InteractiveModel";
 import { BackgroundErrorBoundary } from "../BackgroundErrorBoundary";
 import type { SceneProps } from "../scene";
 
-const MODEL_PATH = "/models/hero.glb";
+// Content-hashed file name: /models/* is served immutable (public/_headers), so
+// a new export must get a new hash (sha256, first 8 hex) and a new name here.
+const MODEL_PATH = "/models/hero.81d5ae4d.glb";
 
 // Pulse tuning
 const INTRO_PULSE_DELAY_MS = 650;
