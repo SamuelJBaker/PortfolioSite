@@ -1,4 +1,11 @@
+import { readFileSync } from "node:fs";
 import type { NextConfig } from "next";
+
+const pkgVersion = (name: string) =>
+  (JSON.parse(readFileSync(`./node_modules/${name}/package.json`, "utf8")) as { version: string }).version;
+
+// Commit sha from whichever variable the Cloudflare build exposes; "dev" locally.
+const buildSha = process.env.CF_PAGES_COMMIT_SHA ?? process.env.WORKERS_CI_COMMIT_SHA;
 
 const nextConfig: NextConfig = {
   images: {
@@ -15,6 +22,11 @@ const nextConfig: NextConfig = {
     // Inlined at build time, so the prerendered footer and the hydrated client
     // render the same year (no hydration mismatch). Updates on each deploy.
     NEXT_PUBLIC_BUILD_YEAR: String(new Date().getFullYear()),
+    // DevTools greeting build line: "build <sha> | Next.js 15 | three r180".
+    // Read at build time so the client never imports three for a version string.
+    NEXT_PUBLIC_BUILD_SHA: buildSha ? buildSha.slice(0, 7) : "dev",
+    NEXT_PUBLIC_NEXT_MAJOR: pkgVersion("next").split(".")[0],
+    NEXT_PUBLIC_THREE_REVISION: pkgVersion("three").split(".")[1],
   },
 };
 

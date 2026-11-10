@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { useBackgroundEffects } from "../background3d/BackgroundEffectsProvider";
 import { usePrefersReducedMotion } from "../../lib/usePrefersReducedMotion";
 import { setConsoleOpener } from "./opener";
+import { useSjbApi } from "./sjbApi";
 
 // The panel, HUD, registry and commands are one lazy chunk, fetched on first open.
 const DevConsole = dynamic(() => import("./DevConsole"), { ssr: false });
@@ -15,8 +16,8 @@ const TAP_WINDOW_MS = 2000;
 
 /**
  * Always-loaded part of the engine console: the backtick toggle, Escape,
- * five taps on the SJB mark, the ?console query and window.sjb.open() (via
- * opener.ts). Renders nothing until the console is first opened.
+ * five taps on the SJB mark, the ?console query and the window.sjb API.
+ * Renders nothing until the console is first opened.
  */
 export function ConsoleTrigger() {
   const [loaded, setLoaded] = React.useState(false);
@@ -36,6 +37,8 @@ export function ConsoleTrigger() {
     setFocusToken((t) => t + 1);
   }, []);
   const closeConsole = React.useCallback(() => setOpen(false), []);
+
+  useSjbApi(effects, reducedMotion);
 
   const navigate = React.useCallback(
     (href: string) => {
