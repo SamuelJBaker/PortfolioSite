@@ -6,6 +6,7 @@ import { useFrame, useThree } from "@react-three/fiber";
 import { InteractiveModel } from "../InteractiveModel";
 import { BackgroundErrorBoundary } from "../BackgroundErrorBoundary";
 import type { SceneProps } from "../scene";
+import { TELEMETRY_EMA_ALPHA, telemetry } from "../../devconsole/telemetry";
 
 // Content-hashed file name: /models/* is served immutable (public/_headers), so
 // a new export must get a new hash (sha256, first 8 hex) and a new name here.
@@ -246,6 +247,48 @@ function GridMouseTracker({
 }
 
 /**
+ * Writes renderer stats into the shared telemetry object each frame, for the
+ * console and HUD outside the Canvas. Default useFrame priority, so R3F keeps
+ * rendering. gl.info resets at the start of each render and useFrame runs
+ * before it, so the counts describe the previous frame.
+ */
+function TelemetryProbe() {
+  const frameloop = useThree((state) => state.frameloop);
+  const emaMs = React.useRef(0);
+
+  React.useEffect(() => {
+    // Under reduced motion the frameloop is "demand": no steady frames, so
+    // readers show "demand mode" instead of a stale FPS.
+    telemetry.frameloop = frameloop === "demand" ? "demand" : "always";
+    return () => {
+      telemetry.fps = 0;
+      telemetry.frameMs = 0;
+    };
+  }, [frameloop]);
+
+  useFrame((state, delta) => {
+    if (!telemetry.enabled) return;
+    const ms = delta * 1000;
+    emaMs.current = emaMs.current === 0 ? ms : emaMs.current + TELEMETRY_EMA_ALPHA * (ms - emaMs.current);
+    telemetry.frameMs = emaMs.current;
+    telemetry.fps = emaMs.current > 0 ? 1000 / emaMs.current : 0;
+
+    const { render, memory } = state.gl.info;
+    telemetry.drawCalls = render.calls;
+    telemetry.triangles = render.triangles;
+    telemetry.points = render.points;
+    telemetry.lines = render.lines;
+    telemetry.geometries = memory.geometries;
+    telemetry.textures = memory.textures;
+    telemetry.dpr = state.viewport.dpr;
+    telemetry.width = state.size.width;
+    telemetry.height = state.size.height;
+  });
+
+  return null;
+}
+
+/**
  * The bust and point grid: what BackgroundCanvas rendered inline before the
  * scene interface. Receives the effect bus as a prop and emits its own intro
  * and idle pulses on it.
@@ -306,6 +349,7 @@ export default function BustScene({ effects, reducedMotion, coarsePointer }: Sce
 
   return (
     <>
+      <TelemetryProbe />
       <GridMouseTracker
         planeZ={GRID_Z}
         mouse={gridMouse}
