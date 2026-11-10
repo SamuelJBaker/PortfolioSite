@@ -43,7 +43,8 @@ export function SiteNav() {
   return (
     <div className="sticky top-0 z-30 border-b border-panel/70 bg-neutral-950/50 backdrop-blur supports-[backdrop-filter]:bg-neutral-950/40">
       <div className="container mx-auto px-6 py-3 flex items-center justify-between gap-4">
-        <Link href="/#top" className="font-medium text-sm md:text-base">
+        {/* data-console-mark: five taps within 2 s open the engine console (ConsoleTrigger). */}
+        <Link href="/#top" className="font-medium text-sm md:text-base" data-console-mark>
           SJB
         </Link>
 

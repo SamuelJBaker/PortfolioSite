@@ -29,3 +29,8 @@ export const profile: Profile = {
 export const mailtoHref = `mailto:${profile.email}?subject=${encodeURIComponent(
   `Portfolio \u2013 ${profile.name}`
 )}`;
+
+/** mailto link for the console's hire command and window.sjb.hire(). */
+export const hireMailtoHref = `mailto:${profile.email}?subject=${encodeURIComponent(
+  "Hiring: Samuel Baker"
+)}`;

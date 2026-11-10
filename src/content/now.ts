@@ -1,13 +1,13 @@
 export const now = {
   reading: {
-    title: "The King in Yellow",
-    author: "Robert W. Chambers",
-    isbn13: "9781782273769",
-    isbn10: "178227376X",
-    publisher: "Pushkin Press",
-    published: "1895",
+    title: "Vengeful",
+    author: "V. E. Schwab",
+    isbn13: "9780765387547",
+    isbn10: "0765387549",
+    publisher: "Tor Publishing Group",
+    published: "2018-09-25",
     binding: "Hardcover",
-    note: "\u201cWhat a precious triple donkey I had made of myself!\u201d",
+    note: "",
   },
   spotifyProfileUrl: "https://open.spotify.com/user/bobcat_908?si=ab7785689a6244c1",
 };

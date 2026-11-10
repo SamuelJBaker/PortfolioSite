@@ -26,3 +26,13 @@ body {
   background: var(--background);
   color: var(--foreground);
 }
+
+/* Engine console: 120 ms slide-down on open (skipped under reduced motion). */
+@keyframes sjb-console-in {
+  from {
+    transform: translateY(-100%);
+  }
+  to {
+    transform: translateY(0);
+  }
+}
