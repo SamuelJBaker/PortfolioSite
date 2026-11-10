@@ -11,14 +11,14 @@ import {
   profile,
   projects,
   skills,
-} from "../content";
-import type { Link } from "../content";
-import { classNames } from "../lib/classNames";
-import { ExternalLinkIcon, FileIcon, LinkedInIcon, MailIcon } from "../components/icons";
-import { Section } from "../components/Section";
-import { SiteNav } from "../components/SiteNav";
-import { NowListening } from "../components/now/NowListening";
-import { NowReading } from "../components/now/NowReading";
+} from "../../content";
+import type { Link } from "../../content";
+import { classNames } from "../../lib/classNames";
+import { ExternalLinkIcon, FileIcon, LinkedInIcon, MailIcon } from "../../components/icons";
+import { Section } from "../../components/Section";
+import { SiteNav } from "../../components/SiteNav";
+import { NowListening } from "../../components/now/NowListening";
+import { NowReading } from "../../components/now/NowReading";
 
 const HEADSHOT_SRC = "/headshot.jpg";
 

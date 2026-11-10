@@ -6,7 +6,7 @@ import * as topojson from "topojson-client";
 import type { Topology } from "topojson-specification";
 import type {
   KeyStat, DayStat, EventStat, CountryStat, KeyDayStat,
-} from "@/app/admin/analytics/page";
+} from "@/app/(admin)/admin/analytics/page";
 import { countryName } from "@/lib/countries";
 
 // -- ISO numeric id -> alpha-2 (for matching world-atlas geo ids to Cloudflare country codes) --

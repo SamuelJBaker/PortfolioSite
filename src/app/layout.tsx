@@ -2,8 +2,6 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import type { Viewport } from "next";
 import "./globals.css";
-import { BackgroundEffectsProvider } from "../components/background3d/BackgroundEffectsProvider";
-import { SiteBackground } from "../components/background3d/SiteBackground";
 import { AnalyticsBeacon } from "../components/scripts/AnalyticsBeacon";
 import { profile } from "../content/profile";
 
@@ -80,14 +78,8 @@ const prepaintStyle: React.CSSProperties = {
           className="fixed inset-0 z-0 pointer-events-none"
         />
 
-        <BackgroundEffectsProvider>
-          {/* Canvas sits above the prepaint gradient. */}
-          <SiteBackground />
-          {/* Foreground content */}
-<div className="relative z-20" data-ui>
-  {children}
-</div>
-        </BackgroundEffectsProvider>
+        {/* Route groups: (site) adds the canvas and content root, (admin) only the content root. */}
+        {children}
         <AnalyticsBeacon />
       </body>
     </html>
