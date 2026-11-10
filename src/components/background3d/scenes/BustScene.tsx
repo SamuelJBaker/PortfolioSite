@@ -6,6 +6,7 @@ import { useFrame, useThree } from "@react-three/fiber";
 import { InteractiveModel } from "../InteractiveModel";
 import { BackgroundErrorBoundary } from "../BackgroundErrorBoundary";
 import type { SceneProps } from "../scene";
+import type { EffectBus } from "../BackgroundEffectsProvider";
 import { TELEMETRY_EMA_ALPHA, telemetry } from "../../devconsole/telemetry";
 
 // Content-hashed file name: /models/* is served immutable (public/_headers), so
@@ -23,6 +24,14 @@ const IDLE_PULSE_INTERVAL_MS = { base: 5000, jitter: 2500 };
 const GRID_Z = -1.55;
 const GRID_REACT = 0.9;
 
+// Dice effects on the grid (natural 20 wave, natural 1 glitch), see diceEffects.ts.
+const WAVE_SECONDS = 1.4;
+const WAVE_SPEED = 3.0;
+const WAVE_WIDTH = 0.35;
+const WAVE_COLOR = "#d4af5a";
+const GLITCH_SECONDS = 0.9;
+const GLITCH_MAX_OFFSET = 0.06;
+
 type PointGridProps = {
   /** Plane Z in world units. Should be behind the bust (further from camera). */
   z?: number;
@@ -35,6 +44,10 @@ type PointGridProps = {
   reactStrength?: number;
   /** Cursor position in the grid plane's local XY; drives the bulge and brighten. */
   mouse?: THREE.Vector2;
+  /** Effect bus: "dice" naturals start the wave and glitch. */
+  effects?: EffectBus;
+  /** No wave or jitter under reduced motion. */
+  reducedMotion?: boolean;
 };
 
 function PointGrid({
@@ -45,9 +58,26 @@ function PointGrid({
   opacity = 0.45,
   reactStrength = 1.0,
   mouse,
+  effects,
+  reducedMotion = false,
 }: PointGridProps) {
   const { camera, size } = useThree();
   const materialRef = React.useRef<THREE.ShaderMaterial | null>(null);
+
+  // Dice naturals: subscribe once, keep the trigger times in refs, read them in useFrame.
+  const waveStart = React.useRef(-1);
+  const glitchStart = React.useRef(-1);
+  const reducedMotionRef = React.useRef(reducedMotion);
+  reducedMotionRef.current = reducedMotion;
+
+  React.useEffect(() => {
+    if (!effects) return;
+    return effects.subscribeEffect((event) => {
+      if (event.type !== "dice" || reducedMotionRef.current) return;
+      if (event.outcome === "nat20") waveStart.current = performance.now();
+      if (event.outcome === "nat1") glitchStart.current = performance.now();
+    });
+  }, [effects]);
 
   const geometry = React.useMemo(() => {
     const g = new THREE.BufferGeometry();
@@ -118,19 +148,51 @@ function PointGrid({
         uTime: { value: 0 },
         uReactStrength: { value: reactStrength },
         uMouse: { value: mouse ? mouse.clone() : new THREE.Vector2(999, 999) },
+
+        // Natural 20: a ring expanding from the bust; natural 1: hashed jitter.
+        uWaveTime: { value: -1 },
+        uWaveOrigin: { value: new THREE.Vector2(0, 0) },
+        uWaveSpeed: { value: WAVE_SPEED },
+        uWaveWidth: { value: WAVE_WIDTH },
+        uWaveColor: { value: new THREE.Color(WAVE_COLOR) },
+        uGlitch: { value: 0 },
       },
 vertexShader: /* glsl */ `
   uniform float uTime;
   uniform float uPointSize;
   uniform float uReactStrength;
   uniform vec2 uMouse;
+  uniform float uWaveTime;
+  uniform vec2 uWaveOrigin;
+  uniform float uWaveSpeed;
+  uniform float uWaveWidth;
+  uniform float uGlitch;
 
   varying float vFalloff;
+  varying float vWave;
 
   float sat(float x) { return clamp(x, 0.0, 1.0); }
+  float hash21(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
 
   void main() {
     vec3 pos = position;
+
+    // Natural 1: jitter by a hash of position and the 30 Hz frame bucket, at most 0.06 units.
+    if (uGlitch > 0.0) {
+      vec2 seed = pos.xy + floor(uTime * 30.0);
+      pos.x += (hash21(seed) - 0.5) * 2.0 * ${GLITCH_MAX_OFFSET} * uGlitch;
+      pos.y += (hash21(seed + 7.3) - 0.5) * 2.0 * ${GLITCH_MAX_OFFSET} * uGlitch;
+    }
+
+    // Natural 20: ring weight w(d, t) = exp(-((d - v t) / sigma)^2) * (1 - smoothstep(0.6, 1.4, t)).
+    float w = 0.0;
+    if (uWaveTime >= 0.0) {
+      float d = distance(pos.xy, uWaveOrigin);
+      float ring = (d - uWaveSpeed * uWaveTime) / uWaveWidth;
+      w = exp(-ring * ring) * (1.0 - smoothstep(0.6, 1.4, uWaveTime));
+    }
+    vWave = w;
+    pos.z += 0.18 * w;
 
     float d = distance(pos.xy, uMouse);
     float falloff = exp(-d * d * 2.2);
@@ -160,7 +222,9 @@ vertexShader: /* glsl */ `
       fragmentShader: /* glsl */ `
         uniform vec3 uColor;
         uniform float uOpacity;
+        uniform vec3 uWaveColor;
         varying float vFalloff;
+        varying float vWave;
 
         float sat(float x) { return clamp(x, 0.0, 1.0); }
 
@@ -172,9 +236,9 @@ vertexShader: /* glsl */ `
           // Soft edge.
           float a = 1.0 - smoothstep(0.38, 0.5, r);
 
-          // Brighten up to 25% near the cursor.
-          float alpha = uOpacity * a * mix(1.0, 1.25, vFalloff);
-          gl_FragColor = vec4(uColor, sat(alpha));
+          // Brighten up to 25% near the cursor; the wave tints gold and lifts alpha.
+          float alpha = uOpacity * a * mix(1.0, 1.25, vFalloff) * (1.0 + 1.5 * vWave);
+          gl_FragColor = vec4(mix(uColor, uWaveColor, vWave), sat(alpha));
         }
       `,
     });
@@ -199,6 +263,14 @@ useFrame((_, delta) => {
 
   m.uniforms.uTime.value += delta;
   m.uniforms.uReactStrength.value = reactStrength;
+
+  const now = performance.now();
+  const waveT = waveStart.current < 0 ? -1 : (now - waveStart.current) / 1000;
+  if (waveT > WAVE_SECONDS) waveStart.current = -1;
+  m.uniforms.uWaveTime.value = waveT > WAVE_SECONDS ? -1 : waveT;
+  const glitchT = glitchStart.current < 0 ? -1 : (now - glitchStart.current) / 1000;
+  if (glitchT > GLITCH_SECONDS) glitchStart.current = -1;
+  m.uniforms.uGlitch.value = glitchT < 0 || glitchT > GLITCH_SECONDS ? 0 : 1 - glitchT / GLITCH_SECONDS;
 
   if (mouse) m.uniforms.uMouse.value.copy(mouse);
   else m.uniforms.uMouse.value.set(999, 999);
@@ -359,6 +431,8 @@ export default function BustScene({ effects, reducedMotion, coarsePointer }: Sce
         z={GRID_Z}
         mouse={gridMouse}
         reactStrength={gridReactiveEnabled ? GRID_REACT : 0}
+        effects={effects}
+        reducedMotion={reducedMotion}
       />
       <ambientLight intensity={0.25} />
       <hemisphereLight
