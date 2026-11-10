@@ -16,6 +16,7 @@ import type { Link } from "../../content";
 import { classNames } from "../../lib/classNames";
 import { ExternalLinkIcon, FileIcon, LinkedInIcon, MailIcon } from "../../components/icons";
 import { Section } from "../../components/Section";
+import { SiteFooter } from "../../components/SiteFooter";
 import { SiteNav } from "../../components/SiteNav";
 import { NowListening } from "../../components/now/NowListening";
 import { NowReading } from "../../components/now/NowReading";
@@ -372,16 +373,7 @@ export default function Page() {
         </div>
       </main>
 
-<footer className="relative z-10 mt-16 border-t border-panel/80 bg-neutral-950/80 backdrop-blur supports-[backdrop-filter]:bg-neutral-950/60">
-  <div className="container mx-auto px-6 py-6 text-sm text-neutral-500 flex flex-wrap items-center justify-between gap-3">
-    <span>&copy; {process.env.NEXT_PUBLIC_BUILD_YEAR} {profile.name}</span>
-    <span className="text-neutral-600 text-xs text-center">
-      This site collects anonymous visit analytics including approximate location
-      and browser information. No personally identifiable information is stored or shared.
-    </span>
-    <span className="text-neutral-600">{new URL(profile.siteUrl).host}</span>
-  </div>
-</footer>
+      <SiteFooter />
     </div>
   );
 }

@@ -5,20 +5,7 @@ import * as THREE from "three";
 import { Canvas, useFrame } from "@react-three/fiber";
 import { useBackgroundEffects } from "./BackgroundEffectsProvider";
 import type { SceneProps } from "./scene";
-
-function usePrefersReducedMotion() {
-  const [reduced, setReduced] = React.useState(false);
-
-  React.useEffect(() => {
-    const mq = window.matchMedia("(prefers-reduced-motion: reduce)");
-    const update = () => setReduced(mq.matches);
-    update();
-    mq.addEventListener("change", update);
-    return () => mq.removeEventListener("change", update);
-  }, []);
-
-  return reduced;
-}
+import { usePrefersReducedMotion } from "../../lib/usePrefersReducedMotion";
 
 function useTouchOnly() {
   const [touchOnly, setTouchOnly] = React.useState(false);
