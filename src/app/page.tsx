@@ -160,7 +160,7 @@ export default function Page() {
           {metrics.map((m) => (
             <div
               key={m.label}
-              className="rounded-2xl border border-line bg-panel/35 p-5 backdrop-blur-sm"
+              className="rounded-2xl border border-line bg-panel/35 p-5"
             >
               <p className="text-xs uppercase tracking-widest text-muted">{m.label}</p>
               <p className="mt-2 text-2xl font-semibold text-neutral-100">{m.value}</p>
