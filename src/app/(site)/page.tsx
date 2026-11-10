@@ -20,7 +20,9 @@ import { SiteNav } from "../../components/SiteNav";
 import { NowListening } from "../../components/now/NowListening";
 import { NowReading } from "../../components/now/NowReading";
 
-const HEADSHOT_SRC = "/headshot.jpg";
+// Pre-generated WebP variants (640, 1280); the image loader in next.config maps
+// each srcSet width onto one of them.
+const HEADSHOT_SRC = "/headshot-1280.webp";
 
 function Badge({ children }: { children: React.ReactNode }) {
   return (
