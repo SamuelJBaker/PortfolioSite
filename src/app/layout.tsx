@@ -2,9 +2,6 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import type { Viewport } from "next";
 import "./globals.css";
-import { BackgroundCanvas } from "../components/background3d/BackgroundCanvas";
-import { BackgroundErrorBoundary } from "../components/background3d/BackgroundErrorBoundary";
-import { BackgroundEffectsProvider } from "../components/background3d/BackgroundEffectsProvider";
 import { AnalyticsBeacon } from "../components/scripts/AnalyticsBeacon";
 import { profile } from "../content/profile";
 
@@ -81,16 +78,8 @@ const prepaintStyle: React.CSSProperties = {
           className="fixed inset-0 z-0 pointer-events-none"
         />
 
-        <BackgroundEffectsProvider>
-          {/* Canvas sits above the dot grid. Decorative only: if it fails, drop it and keep the page. */}
-          <BackgroundErrorBoundary label="background canvas">
-            <BackgroundCanvas />
-          </BackgroundErrorBoundary>
-          {/* Foreground content */}
-<div className="relative z-20" data-ui>
-  {children}
-</div>
-        </BackgroundEffectsProvider>
+        {/* Route groups: (site) adds the canvas and content root, (admin) only the content root. */}
+        {children}
         <AnalyticsBeacon />
       </body>
     </html>

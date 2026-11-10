@@ -1,3 +1,9 @@
 # https://developers.cloudflare.com/workers/static-assets/headers
 /_next/static/*
   Cache-Control: public,max-age=31536000,immutable
+# Content-hashed model files and the pre-generated image variants. A changed
+# asset must ship under a new file name.
+/models/*
+  Cache-Control: public, max-age=31536000, immutable
+/*.webp
+  Cache-Control: public, max-age=31536000, immutable

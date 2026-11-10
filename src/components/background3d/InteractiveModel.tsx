@@ -11,9 +11,8 @@ import {
   MouseDisplaceUniforms,
 } from "./createMouseDisplaceMaterial";
 import { useFitToViewport } from "./useFitToViewport";
-import { useBackgroundEffects } from "./BackgroundEffectsProvider";
-import type { EffectEvent, InferencePulseMode, InferencePulseState } from "./BackgroundEffectsProvider";
-import { useEffectBus } from "./useEffectBus";
+import { DEFAULT_PULSE } from "./BackgroundEffectsProvider";
+import type { EffectBus, InferencePulseMode, InferencePulseState } from "./BackgroundEffectsProvider";
 import { tap } from "../../lib/haptics";
 
 type GLTF = {
@@ -57,7 +56,8 @@ type InteractiveModelProps = {
   hasPointer?: boolean;
   debug?: boolean;
 
-  inferencePulse?: InferencePulseState | null;
+  /** Effect bus; pulses arrive as events and clicks are emitted on it. */
+  effects: EffectBus;
 };
 
 function useOverlayMaterial(options: {
@@ -123,18 +123,19 @@ export function InteractiveModel({
   touchOnly = false,
   hasPointer = true,
   debug = false,
-  inferencePulse = null,
+  effects,
 }: InteractiveModelProps) {
-  const { triggerInferencePulse } = useBackgroundEffects();
+  // Pulse state lives here, fed by "pulse" events on the bus; useFrame reads
+  // it through the ref so an event never re-renders the scene.
+  const pulseRef = React.useRef<InferencePulseState | null>(null);
 
-  // Effect bus: every pulse also arrives here as an event. Pulse rendering still
-  // follows the `inferencePulse` prop; the bus is the attachment point for
-  // later phases (scene interface, console, dice), so for now we only keep the
-  // most recent event.
-  const lastEffectRef = React.useRef<EffectEvent | null>(null);
-  useEffectBus((event) => {
-    lastEffectRef.current = event;
-  });
+  React.useEffect(() => {
+    return effects.subscribeEffect((event) => {
+      if (event.type !== "pulse") return;
+      const { intensity, durationMs, mode } = { ...DEFAULT_PULSE, ...event.options };
+      pulseRef.current = { startTime: performance.now(), durationMs, intensity, mode };
+    });
+  }, [effects]);
 
   const baseRef = React.useRef<THREE.Group | null>(null);
   const overlayRef = React.useRef<THREE.Group | null>(null);
@@ -173,12 +174,15 @@ React.useEffect(() => {
     }
 
     tap();
-    triggerInferencePulse({ intensity: 0.95, durationMs: 900, mode: "ai" });
+    effects.emitEffect({
+      type: "pulse",
+      options: { intensity: 0.95, durationMs: 900, mode: "ai" },
+    });
   };
 
   window.addEventListener("pointerdown", onPointerDown, { passive: true, capture: true });
   return () => window.removeEventListener("pointerdown", onPointerDown, { capture: true } as any);
-}, [triggerInferencePulse, reducedMotion]);
+}, [effects, reducedMotion]);
 
   useFrame((_, delta) => {
     const uniforms = overlayMaterial.uniforms as MouseDisplaceUniforms;
@@ -188,6 +192,7 @@ React.useEffect(() => {
     // Written before the motion gate so taps and idle pulses render on touch
     // devices, where hover displacement and idle wobble stay off.
     let p = 0;
+    const inferencePulse = pulseRef.current;
     if (inferencePulse) {
       const now = performance.now();
       const elapsed = now - inferencePulse.startTime;

@@ -11,16 +11,18 @@ import {
   profile,
   projects,
   skills,
-} from "../content";
-import type { Link } from "../content";
-import { classNames } from "../lib/classNames";
-import { ExternalLinkIcon, FileIcon, LinkedInIcon, MailIcon } from "../components/icons";
-import { Section } from "../components/Section";
-import { SiteNav } from "../components/SiteNav";
-import { NowListening } from "../components/now/NowListening";
-import { NowReading } from "../components/now/NowReading";
+} from "../../content";
+import type { Link } from "../../content";
+import { classNames } from "../../lib/classNames";
+import { ExternalLinkIcon, FileIcon, LinkedInIcon, MailIcon } from "../../components/icons";
+import { Section } from "../../components/Section";
+import { SiteNav } from "../../components/SiteNav";
+import { NowListening } from "../../components/now/NowListening";
+import { NowReading } from "../../components/now/NowReading";
 
-const HEADSHOT_SRC = "/headshot.jpg";
+// Pre-generated WebP variants (640, 1280); the image loader in next.config maps
+// each srcSet width onto one of them.
+const HEADSHOT_SRC = "/headshot-1280.webp";
 
 function Badge({ children }: { children: React.ReactNode }) {
   return (
@@ -99,12 +101,10 @@ export default function Page() {
       <SiteNav />
 
       <main id="top" className="relative z-10 container mx-auto px-6 py-14 md:py-20">
-        <motion.header
-          initial={{ opacity: 0, y: 16 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.8 }}
-          className="w-full"
-        >
+        {/* Above the fold: no entrance animation. framer-motion serialises
+            `initial` into the server HTML, so an animated hero paints at
+            opacity 0 and stays blank until hydration (see docs/phase-3). */}
+        <header className="w-full">
           <p className="tracking-widest text-xs uppercase text-muted">{profile.tagline}</p>
 
           <div className="mt-3 grid gap-8 md:grid-cols-[minmax(0,1fr)_clamp(11rem,26vw,22rem)] md:items-center">
@@ -155,23 +155,19 @@ export default function Page() {
               Email me
             </a>
           </div>
-        </motion.header>
+        </header>
 
 
         <div className="mt-10 grid gap-4 sm:grid-cols-3">
-          {metrics.map((m, i) => (
-            <motion.div
+          {metrics.map((m) => (
+            <div
               key={m.label}
-              initial={{ opacity: 0, y: 10 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true, amount: 0.3 }}
-              transition={{ duration: 0.5, delay: i * 0.08 }}
-              className="rounded-2xl border border-line bg-panel/35 p-5 backdrop-blur-sm"
+              className="rounded-2xl border border-line bg-panel/35 p-5"
             >
               <p className="text-xs uppercase tracking-widest text-muted">{m.label}</p>
               <p className="mt-2 text-2xl font-semibold text-neutral-100">{m.value}</p>
               <p className="mt-2 text-sm text-muted">{m.detail}</p>
-            </motion.div>
+            </div>
           ))}
         </div>
 

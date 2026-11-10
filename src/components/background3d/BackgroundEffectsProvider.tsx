@@ -28,6 +28,12 @@ export type EffectEvent =
 
 export type EffectListener = (event: EffectEvent) => void;
 
+/** The bus half of the context: what a scene module receives as props. */
+export type EffectBus = {
+  emitEffect: (event: EffectEvent) => void;
+  subscribeEffect: (listener: EffectListener) => () => void;
+};
+
 type BackgroundEffectsContextValue = {
   pulse: InferencePulseState | null;
   idleEnabled: boolean;
@@ -40,7 +46,7 @@ type BackgroundEffectsContextValue = {
 const BackgroundEffectsContext =
   React.createContext<BackgroundEffectsContextValue | null>(null);
 
-const DEFAULT_PULSE: Required<InferencePulseOptions> = {
+export const DEFAULT_PULSE: Required<InferencePulseOptions> = {
   intensity: 0.75,
   durationMs: 850,
   mode: "ai",
