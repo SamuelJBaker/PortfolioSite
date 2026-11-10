@@ -9,6 +9,8 @@ import "./ls";
 import "./open";
 import "./whoami";
 import "./goto";
+import "./roll";
+import "./seed";
 import "./pulse";
 import "./hire";
 import "./sudo";

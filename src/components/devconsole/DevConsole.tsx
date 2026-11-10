@@ -7,8 +7,9 @@ import type { CommandContext, ConsoleLine, LineKind } from "./registry";
 import { Hud } from "./Hud";
 import { CONSOLE_SLIDE_MS, consoleTheme } from "./theme";
 import { TELEMETRY_READ_HZ, formatFrameLine, telemetry } from "./telemetry";
-import { hashStringToUint, mulberry32 } from "../../lib/rng";
+import { mulberry32 } from "../../lib/rng";
 import type { EffectBus } from "../background3d/BackgroundEffectsProvider";
+import { BORDER_FLASH_MS } from "./diceEffects";
 
 type Line = ConsoleLine & { id: number };
 
@@ -40,16 +41,12 @@ function cryptoFloat(): number {
   return buf[0] / 4294967296;
 }
 
-/** Seed from `seed <n>`: integers as given, anything else hashed. */
-export function seedFromArg(arg: string): number {
-  return /^-?\d+$/.test(arg) ? Number(arg) >>> 0 : hashStringToUint(arg);
-}
-
 const kindColor: Record<LineKind, string> = {
   in: consoleTheme.text,
   out: consoleTheme.text,
   err: consoleTheme.error,
   sys: consoleTheme.muted,
+  gold: consoleTheme.accentHex,
 };
 
 type DevConsoleProps = {
@@ -91,6 +88,24 @@ export default function DevConsole({
   const previousFocus = React.useRef<Element | null>(null);
   const hudRef = React.useRef(hud);
   hudRef.current = hud;
+  // Reduced-motion stand-in for the wave and glitch: a 600 ms border fade on the panel.
+  const [flash, setFlash] = React.useState<"nat20" | "nat1" | null>(null);
+  const reducedMotionRef = React.useRef(reducedMotion);
+  reducedMotionRef.current = reducedMotion;
+
+  React.useEffect(() => {
+    let timer: number | null = null;
+    const unsubscribe = effects.subscribeEffect((event) => {
+      if (event.type !== "dice" || event.outcome === "roll" || !reducedMotionRef.current) return;
+      setFlash(event.outcome);
+      if (timer !== null) window.clearTimeout(timer);
+      timer = window.setTimeout(() => setFlash(null), BORDER_FLASH_MS);
+    });
+    return () => {
+      unsubscribe();
+      if (timer !== null) window.clearTimeout(timer);
+    };
+  }, [effects]);
 
   const print = React.useCallback((text: string, kind: LineKind = "out", href?: string) => {
     const id = nextId.current++;
@@ -270,7 +285,9 @@ export default function DevConsole({
           style={{
             height: "clamp(240px, 40vh, 480px)",
             background: consoleTheme.panel,
-            borderColor: consoleTheme.border,
+            borderColor: flash === "nat20" ? consoleTheme.accentHex : flash === "nat1" ? consoleTheme.error : consoleTheme.border,
+            boxShadow: flash ? `inset 0 0 0 2px ${flash === "nat20" ? consoleTheme.accentHex : consoleTheme.error}` : undefined,
+            transition: flash ? undefined : `border-color ${BORDER_FLASH_MS}ms ease-out, box-shadow ${BORDER_FLASH_MS}ms ease-out`,
             color: consoleTheme.text,
             fontFamily: consoleTheme.fontFamily,
             fontSize: consoleTheme.fontSize,

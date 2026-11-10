@@ -1,8 +1,8 @@
 import type { EffectBus } from "../background3d/BackgroundEffectsProvider";
 import type { Telemetry } from "./telemetry";
 
-/** One scrollback line. `href` renders the text as a link. */
-export type ConsoleLine = { kind: "in" | "out" | "err" | "sys"; text: string; href?: string };
+/** One scrollback line. `href` renders the text as a link; "gold" is for critical successes. */
+export type ConsoleLine = { kind: "in" | "out" | "err" | "sys" | "gold"; text: string; href?: string };
 export type LineKind = ConsoleLine["kind"];
 
 export type CommandContext = {

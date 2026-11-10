@@ -19,11 +19,13 @@ export type InferencePulseState = {
 
 /**
  * Events on the effect bus. "pulse" mirrors every triggerInferencePulse call;
+ * "dice" carries a console roll (the grid wave and glitch listen for naturals);
  * "shader-mode" is reserved for callers that want to steer the wire color
  * without pulsing (scene interface, console, dice).
  */
 export type EffectEvent =
   | { type: "pulse"; options?: InferencePulseOptions }
+  | { type: "dice"; outcome: "nat20" | "nat1" | "roll"; value: number; sides: number }
   | { type: "shader-mode"; mode: InferencePulseMode };
 
 export type EffectListener = (event: EffectEvent) => void;
