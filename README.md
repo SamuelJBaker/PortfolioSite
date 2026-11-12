@@ -13,8 +13,14 @@ Tailwind CSS 4, on Cloudflare Workers via OpenNext. Analytics in D1 and KV.
 Push to `main`; Cloudflare builds and deploys automatically.
 
 ## Secrets
-`ADMIN_PASSWORD`, `COOKIE_SECRET`, `LASTFM_API_KEY`, `LASTFM_USER` as Worker
-secrets, or in `.dev.vars` locally. Bindings: `ANALYTICS_DB` (D1), `ANALYTICS_KV` (KV).
+`LASTFM_API_KEY`, `LASTFM_USER` as Worker secrets, or in `.dev.vars` locally
+(see `.dev.vars.example`). Bindings: `ANALYTICS_DB` (D1), `ANALYTICS_KV` (KV).
+
+## Admin auth
+`/admin` and `/api/admin` sit behind Cloudflare Access (team domain and
+audience in `wrangler.jsonc` vars). The worker re-verifies the Access JWT in
+`src/middleware.ts`; there is no password or session cookie of its own. Under
+`next dev` with no token the identity is `dev@localhost`.
 
 ## D1 migration
     npx wrangler d1 migrations apply samueljbaker-analytics --remote

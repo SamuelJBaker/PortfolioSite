@@ -1,92 +1,51 @@
 import { type NextRequest, NextResponse } from "next/server";
+import { getCloudflareContext } from "@opennextjs/cloudflare";
+import { type AccessEnv, verifyAccessJwt } from "@/lib/access";
 
-// Cookie name for the admin session
-const ADMIN_COOKIE = "sjb_admin_session";
+/**
+ * Admin gate. Cloudflare Access fronts /admin and /api/admin at the edge and
+ * handles the login redirect; this middleware re-verifies the Access JWT so
+ * nothing under those prefixes runs for a request that did not pass it.
+ *
+ * On success the verified email travels to pages and route handlers as the
+ * x-admin-email request header. The header is always overwritten here, so a
+ * client-supplied value never reaches a handler.
+ */
 
-// -- Simple HMAC signature verification ---------------------------------------
-// Cookie value format: "{payload}.{hex-signature}"
-// Payload is just "admin" - single-user, no claims needed.
-async function verifySignedCookie(
-  value: string,
-  secret: string
-): Promise<boolean> {
+const ADMIN_EMAIL_HEADER = "x-admin-email";
+
+function accessEnv(): AccessEnv {
   try {
-    const lastDot = value.lastIndexOf(".");
-    if (lastDot === -1) return false;
-
-    const payload = value.slice(0, lastDot);
-    const signature = value.slice(lastDot + 1);
-
-    const encoder = new TextEncoder();
-    const keyMaterial = await crypto.subtle.importKey(
-      "raw",
-      encoder.encode(secret),
-      { name: "HMAC", hash: "SHA-256" },
-      false,
-      ["verify"]
-    );
-
-    // Decode hex signature back to bytes
-    const sigBytes = new Uint8Array(
-      signature.match(/.{1,2}/g)?.map((b) => parseInt(b, 16)) ?? []
-    );
-
-    return await crypto.subtle.verify(
-      "HMAC",
-      keyMaterial,
-      sigBytes,
-      encoder.encode(payload)
-    );
+    return getCloudflareContext().env as AccessEnv;
   } catch {
-    return false;
+    return {
+      ACCESS_TEAM_DOMAIN: process.env.ACCESS_TEAM_DOMAIN,
+      ACCESS_AUD: process.env.ACCESS_AUD,
+    };
   }
 }
 
-// -- Middleware ----------------------------------------------------------------
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
+  const isApi = pathname.startsWith("/api/admin");
 
-  // Only guard /admin routes - pass everything else through immediately
-  if (!pathname.startsWith("/admin")) {
-    return NextResponse.next();
+  const identity = await verifyAccessJwt(request, accessEnv());
+
+  if (!identity) {
+    if (isApi) {
+      return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 });
+    }
+    return new NextResponse("Access denied", {
+      status: 403,
+      headers: { "Content-Type": "text/plain; charset=utf-8" },
+    });
   }
 
-  // /admin/login is always accessible (otherwise you can never log in)
-  if (pathname.startsWith("/admin/login")) {
-    return NextResponse.next();
-  }
-
-  const cookieSecret = process.env.COOKIE_SECRET;
-
-  // If COOKIE_SECRET isn't configured, block access entirely
-  if (!cookieSecret) {
-    console.error("[middleware] COOKIE_SECRET is not set");
-    return NextResponse.redirect(new URL("/admin/login", request.url));
-  }
-
-  const cookie = request.cookies.get(ADMIN_COOKIE);
-
-  if (!cookie?.value) {
-    return NextResponse.redirect(new URL("/admin/login", request.url));
-  }
-
-  const valid = await verifySignedCookie(cookie.value, cookieSecret);
-
-  if (!valid) {
-    // Cookie present but invalid/tampered - redirect to login
-    const response = NextResponse.redirect(
-      new URL("/admin/login", request.url)
-    );
-    // Clear the bad cookie
-    response.cookies.delete(ADMIN_COOKIE);
-    return response;
-  }
-
-  // Valid session - allow through
-  return NextResponse.next();
+  const headers = new Headers(request.headers);
+  headers.set(ADMIN_EMAIL_HEADER, identity.email);
+  return NextResponse.next({ request: { headers } });
 }
 
 export const config = {
-  // Run middleware on all /admin routes
-  matcher: ["/admin/:path*"],
+  matcher: ["/admin/:path*", "/api/admin/:path*"],
 };

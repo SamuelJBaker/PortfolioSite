@@ -11,6 +11,12 @@
     "nodejs_compat",
     "global_fetch_strictly_public"
   ],
+  "vars": {
+    // Cloudflare Access settings for /admin and /api/admin. Public identifiers,
+    // not secrets: the JWT is verified against the team's JWKS in src/lib/access.ts.
+    "ACCESS_TEAM_DOMAIN": "cabbageacolytes.cloudflareaccess.com",
+    "ACCESS_AUD": "0933c0e63aa2f92fa640ddd8c1853b768088bd521d46e00f5f093babb2177e1d"
+  },
   "assets": {
     "binding": "ASSETS",
     "directory": ".open-next/assets"
