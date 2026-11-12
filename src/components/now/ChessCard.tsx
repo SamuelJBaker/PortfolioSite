@@ -10,7 +10,7 @@ import { FormStrip } from "../chess/FormStrip";
 import { SegmentedToggle } from "../chess/GameToggle";
 import { PieceDefs } from "../chess/Pieces";
 import { NowCard } from "./NowCard";
-import { RatingSparkline } from "./RatingSparkline";
+import { RatingChart } from "../chess/RatingChart";
 
 type State = { status: "loading" } | { status: "error" } | { status: "ready"; data: ChessSummary };
 
@@ -161,9 +161,9 @@ export function ChessCard() {
                 />
               </div>
 
-              {s.rating !== null ? (
+              {s.rating !== null && s.series.length > 0 ? (
                 <div className="mt-3">
-                  <RatingSparkline history={s.history} goal={s.goal} rating={s.rating} startRating={s.startRating} />
+                  <RatingChart series={s.series} goal={s.goal} rating={s.rating} startRating={s.startRating} />
                 </div>
               ) : null}
             </>
