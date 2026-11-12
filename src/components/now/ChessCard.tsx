@@ -5,6 +5,7 @@ import { chess, chessProfileUrl } from "../../content/chess";
 import { dayLabel, formatDelta, lastGameLine, monthLabel } from "../../lib/chess/format";
 import type { ChessSummary } from "../../lib/chess/types";
 import { ExternalLinkIcon } from "../icons";
+import { PieceDefs } from "../chess/Pieces";
 import { ChessBoardSvg } from "./ChessBoardSvg";
 import { NowCard } from "./NowCard";
 import { RatingSparkline } from "./RatingSparkline";
@@ -94,6 +95,7 @@ export function ChessCard() {
 
   return (
     <NowCard title={TITLE} footer={<Footer />}>
+      <PieceDefs />
       <div className={"mt-4 flex flex-col gap-6 sm:flex-row " + BODY_MIN_H}>
         <div className="h-40 w-40 shrink-0 overflow-hidden rounded-xl border border-line bg-neutral-950/40">
           {s.lastGame ? (

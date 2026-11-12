@@ -1,15 +1,15 @@
 import * as React from "react";
 import { orientBoard, parseFenBoard } from "../../lib/chess/fen";
 import { outcomeWord } from "../../lib/chess/format";
+import { pieceSymbolId } from "../chess/Pieces";
 
 const SQUARE = 20;
 const SIZE = SQUARE * 8;
 
 /**
  * Final position from a FEN, oriented to my color. Site palette only: panel
- * and line tokens for the squares, Geist Mono letters for the pieces (white
- * uppercase in neutral-100, black lowercase in neutral-400). No last-move
- * tint: the ingest skips PGN parsing.
+ * and line tokens for the squares, the Cburnett sprite for the pieces
+ * (PieceDefs must be mounted once on the page). No last-move tint here.
  */
 export function ChessBoardSvg({
   fen,
@@ -54,21 +54,14 @@ export function ChessBoardSvg({
         board.map((cells, row) =>
           cells.map((piece, col) =>
             piece ? (
-              <text
+              <use
                 key={`p-${row}-${col}`}
-                x={col * SQUARE + SQUARE / 2}
-                y={row * SQUARE + SQUARE / 2}
-                textAnchor="middle"
-                dominantBaseline="central"
-                fontSize={13}
-                fontWeight={600}
-                className={
-                  "font-mono select-none " +
-                  (piece === piece.toUpperCase() ? "fill-neutral-100" : "fill-neutral-400")
-                }
-              >
-                {piece}
-              </text>
+                href={`#${pieceSymbolId(piece)}`}
+                x={col * SQUARE}
+                y={row * SQUARE}
+                width={SQUARE}
+                height={SQUARE}
+              />
             ) : null
           )
         )}

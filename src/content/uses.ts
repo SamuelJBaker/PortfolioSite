@@ -70,12 +70,13 @@ const sections: UsesSection[] = [
       item("D1", "https://developers.cloudflare.com/d1/"),
       item("KV", "https://developers.cloudflare.com/kv/"),
       item("Last.fm", "https://www.last.fm/"),
+      item("Cburnett chess pieces | SVG set by Cburnett on Wikimedia Commons, BSD license", "https://commons.wikimedia.org/wiki/Category:SVG_chess_pieces"),
     ],
   },
 ].filter((s) => s.items.length >= 2); // a seeded section thinner than two items is left out, not padded
 
 export const uses: { updated: string; intro: string; sections: UsesSection[] } = {
-  updated: "2026-11-10",
+  updated: "2026-11-12",
   intro: "What I work on and with. Updated when it changes.",
   sections,
 };

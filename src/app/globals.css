@@ -83,3 +83,16 @@ body {
       fx-glitch-split 900ms steps(4, end);
   }
 }
+
+/* Chess piece sprite (src/components/chess/Pieces.tsx): one set of paths,
+   the side chooses the colors through these variables. Tokens only. */
+.piece-white {
+  --piece-fill: var(--color-accent-text);
+  --piece-stroke: var(--color-ink);
+  --piece-stroke-width: 1.5;
+}
+.piece-black {
+  --piece-fill: var(--color-panel);
+  --piece-stroke: var(--color-accent);
+  --piece-stroke-width: 1.3;
+}
