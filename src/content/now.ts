@@ -1,3 +1,5 @@
+// Render fallback for the Now section: shown in the static HTML and whenever
+// /api/now (D1, edited from /admin/now) is unavailable.
 export const now = {
   reading: {
     title: "Vengeful",
@@ -9,5 +11,4 @@ export const now = {
     binding: "Hardcover",
     note: "",
   },
-  spotifyProfileUrl: "https://open.spotify.com/user/bobcat_908?si=ab7785689a6244c1",
 };
