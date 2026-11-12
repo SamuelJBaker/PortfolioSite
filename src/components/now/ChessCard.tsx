@@ -20,8 +20,9 @@ type TabId = "overview" | "openings" | "breakdown";
 type Shown = "last" | "best";
 
 const TITLE = "What I am playing";
-// Every state shares this body height so loading, error and ready do not shift the page.
-const BODY_MIN_H = "md:min-h-[24rem]";
+// Every state shares this body height so loading, error and ready do not shift
+// the page: 28.5rem is the ready body at md and up (board column plus form strip).
+const BODY_MIN_H = "md:min-h-[28.5rem]";
 const TABS: TabDef<TabId>[] = [
   { id: "overview", label: "Overview" },
   { id: "openings", label: "Openings" },
