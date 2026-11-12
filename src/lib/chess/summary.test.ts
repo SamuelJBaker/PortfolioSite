@@ -69,11 +69,36 @@ describe("summarize", () => {
 
   it("finds the low with its time and the three deltas", () => {
     expect(s.low).toEqual({ rating: 486, t: OCT + 20 * DAY + 200 });
-    // 30 days before now is Oct 13 + 1h: no point on or before it.
-    expect(s.deltas).toEqual({ d30: null, sinceTrack: 625 - 560, fromLow: 625 - 486 });
+    // 30 days before now is Oct 13 + 1h: no game on or before it, so the
+    // earliest stored game (Oct 21, 500) is the fallback reference.
+    expect(s.deltas).toEqual({ d30: 625 - 500, sinceTrack: 625 - 560, fromLow: 625 - 486 });
+    expect(s.d30Ref).toEqual({ t: OCT + 20 * DAY + 100, rating: 500, fallback: true });
     const later = summarize(rows, { rating: 625 }, config, NOV + 25 * DAY);
-    // 30 days before Nov 26 is Oct 27: closest point not after it is Oct 26 (550).
+    // 30 days before Nov 26 is Oct 27: the latest game not after it is Oct 26 (550).
     expect(later.deltas.d30).toBe(625 - 550);
+    expect(later.d30Ref).toEqual({ t: OCT + 25 * DAY, rating: 550, fallback: false });
+  });
+
+  it("d30 uses the latest game on or before the cutoff, not the day's close", () => {
+    // Two games on Oct 21; the cutoff falls between them.
+    const cutoffNow = OCT + 20 * DAY + 150 + 30 * DAY;
+    const r = summarize(rows, { rating: 625 }, config, cutoffNow);
+    expect(r.d30Ref).toEqual({ t: OCT + 20 * DAY + 100, rating: 500, fallback: false });
+    expect(r.deltas.d30).toBe(125);
+  });
+
+  it("single game: d30 falls back to that game, low is that game", () => {
+    const one = [row(NOV + 3 * DAY, 571, "L")];
+    const r = summarize(one, { rating: 571 }, config, NOV + 5 * DAY);
+    expect(r.d30Ref).toEqual({ t: NOV + 3 * DAY, rating: 571, fallback: true });
+    expect(r.deltas).toEqual({ d30: 0, sinceTrack: 0, fromLow: 0 });
+    expect(r.low).toEqual({ rating: 571, t: NOV + 3 * DAY });
+  });
+
+  it("from-low ignores games before backfillSince", () => {
+    const r = summarize([row(OCT - 2 * DAY, 300, "L"), ...rows], { rating: 625 }, config, now);
+    expect(r.low).toEqual({ rating: 486, t: OCT + 20 * DAY + 200 });
+    expect(r.deltas.fromLow).toBe(625 - 486);
   });
 
   it("reports the last game and the best win since trackSince", () => {
@@ -91,6 +116,7 @@ describe("summarize", () => {
     expect(empty.history).toEqual([]);
     expect(empty).toMatchObject({ rating: null, startRating: null, peak: null, low: null, lastGame: null, bestWin: null });
     expect(empty.deltas).toEqual({ d30: null, sinceTrack: null, fromLow: null });
+    expect(empty.d30Ref).toBeNull();
     expect(empty.record).toEqual({ win: 0, loss: 0, draw: 0 });
   });
 
@@ -98,7 +124,7 @@ describe("summarize", () => {
     const only = summarize(rows.slice(0, 3), { rating: 550 }, config, now);
     expect(only.history).toHaveLength(2);
     expect(only).toMatchObject({ startRating: null, peak: null, record: { win: 0, loss: 0, draw: 0 } });
-    expect(only.deltas).toEqual({ d30: null, sinceTrack: null, fromLow: 550 - 486 });
+    expect(only.deltas).toEqual({ d30: 550 - 500, sinceTrack: null, fromLow: 550 - 486 });
   });
 
   it("caps history at 180 points, keeping the most recent", () => {
@@ -108,5 +134,17 @@ describe("summarize", () => {
     expect(h).toHaveLength(180);
     expect(h[0].r).toBe(520);
     expect(h[179].r).toBe(699);
+  });
+});
+
+describe("backfill month helpers", () => {
+  it("isYearMonth accepts YYYY-MM only", async () => {
+    const { isYearMonth, monthsSince } = await import("./refresh");
+    expect(isYearMonth("2026-10")).toBe(true);
+    expect(isYearMonth("2026-13")).toBe(false);
+    expect(isYearMonth("2026-1")).toBe(false);
+    expect(isYearMonth(202610)).toBe(false);
+    expect(monthsSince("2025-11", new Date(Date.UTC(2026, 0, 15)))).toEqual(["2025/11", "2025/12", "2026/01"]);
+    expect(monthsSince("2026-11", new Date(Date.UTC(2026, 10, 12)))).toEqual(["2026/11"]);
   });
 });

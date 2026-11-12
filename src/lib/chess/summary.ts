@@ -68,12 +68,17 @@ export function summarize(
     }
   }
 
-  // d30: rating now minus the history point closest to, and not after, 30 days ago.
+  // d30: rating now minus the rating after the latest game with
+  // end_time <= now - 30 d. With no such game (history shorter than 30 days)
+  // the earliest stored game is the reference and d30Ref.fallback is true.
   const cutoff = nowSec - 30 * DAY_SEC;
-  let ref: { t: number; r: number } | null = null;
-  for (const p of history) if (p.t <= cutoff) ref = p;
+  let refGame: ChessGameRow | null = null;
+  for (const r of all) if (r.end_time <= cutoff) refGame = r;
+  const fallback = !refGame && all.length > 0;
+  if (!refGame && all.length) refGame = all[0];
+  const d30Ref = refGame ? { t: refGame.end_time, rating: refGame.my_rating, fallback } : null;
   const deltas = {
-    d30: rating !== null && ref ? rating - ref.r : null,
+    d30: rating !== null && d30Ref ? rating - d30Ref.rating : null,
     sinceTrack: rating !== null && startRating !== null ? rating - startRating : null,
     fromLow: rating !== null && low ? rating - low.rating : null,
   };
@@ -88,6 +93,7 @@ export function summarize(
     record,
     history,
     deltas,
+    d30Ref,
     low,
     lastGame: last
       ? {

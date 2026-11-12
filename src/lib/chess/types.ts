@@ -43,6 +43,12 @@ export interface ChessSummary {
   /** Last rating per UTC day since backfillSince, oldest first, max 180 points. */
   history: ChessHistoryPoint[];
   deltas: { d30: number | null; sinceTrack: number | null; fromLow: number | null };
+  /**
+   * What d30 was measured against: the latest game with end_time <= now - 30 d,
+   * or, when none is stored (fallback), the earliest stored game. The card
+   * labels a fallback "Since <Mon D>" instead of "30 days".
+   */
+  d30Ref: { t: number; rating: number; fallback: boolean } | null;
   /** min(my_rating) since backfillSince, earliest occurrence. */
   low: { rating: number; t: number } | null;
   lastGame: {

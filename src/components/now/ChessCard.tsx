@@ -118,7 +118,7 @@ export function ChessCard() {
           ) : (
             <>
               <div className="mt-3 grid grid-cols-3 gap-3">
-                <Delta label="30 days" value={s.deltas.d30} />
+                <Delta label={s.d30Ref?.fallback ? `Since ${dayLabel(s.d30Ref.t)}` : "30 days"} value={s.deltas.d30} />
                 <Delta label={`Since ${monthLabel(chess.trackSince)}`} value={s.deltas.sinceTrack} />
                 <Delta
                   label={s.low ? `From low (${s.low.rating}, ${dayLabel(s.low.t)})` : "From low"}

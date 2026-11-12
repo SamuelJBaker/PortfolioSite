@@ -32,6 +32,7 @@ export const CHESS_FALLBACK: ChessSummary = {
   record: { win: 0, loss: 0, draw: 0 },
   history: [],
   deltas: { d30: null, sinceTrack: null, fromLow: null },
+  d30Ref: null,
   low: null,
   lastGame: null,
   bestWin: null,
@@ -148,16 +149,57 @@ export async function loadChessSummary(env: ChessEnv, now = new Date()): Promise
   return summarizeFromDb(env.ANALYTICS_DB, rating, now);
 }
 
-/** Walks every archive month from backfillSince to now, serially. */
-export async function backfill(env: ChessEnv, now = new Date()): Promise<{ months: string[]; inserted: number }> {
-  const months = monthsSince(chess.backfillSince, now);
+export interface BackfillMonth {
+  month: string;
+  /** Rows the archive mapped to (rated games in the tracked time class). */
+  mapped: number;
+  /** Rows that were new to D1. */
+  inserted: number;
+}
+
+export interface BackfillResult {
+  since: string;
+  months: string[];
+  inserted: number;
+  detail: BackfillMonth[];
+  /** chess_games state after the walk. */
+  stored: { count: number; firstEndTime: number | null; lastEndTime: number | null };
+}
+
+export function isYearMonth(value: unknown): value is string {
+  return typeof value === "string" && /^\d{4}-(0[1-9]|1[0-2])$/.test(value);
+}
+
+/**
+ * Walks every archive month from `since` (default backfillSince) to now,
+ * serially, 250 ms apart. INSERT OR IGNORE on game_url, so re-running is
+ * safe; months already fetched return 304 through the stored ETag.
+ */
+export async function backfill(env: ChessEnv, since: string = chess.backfillSince, now = new Date()): Promise<BackfillResult> {
+  const months = monthsSince(since, now);
+  const detail: BackfillMonth[] = [];
   let inserted = 0;
   for (let i = 0; i < months.length; i++) {
     if (i > 0) await delay(BACKFILL_GAP_MS);
     const rows = await fetchArchiveRows(env.ANALYTICS_KV, months[i]);
-    inserted += await upsertRows(env.ANALYTICS_DB, rows);
+    const n = await upsertRows(env.ANALYTICS_DB, rows);
+    inserted += n;
+    detail.push({ month: months[i], mapped: rows.length, inserted: n });
   }
   // The next GET /api/chess recomputes with the new rows.
   await env.ANALYTICS_KV.delete(CHESS_SUMMARY_KEY);
-  return { months, inserted };
+
+  const stored = await env.ANALYTICS_DB.prepare(
+    "SELECT COUNT(*) AS count, MIN(end_time) AS first_end, MAX(end_time) AS last_end FROM chess_games WHERE time_class = ?"
+  )
+    .bind(chess.timeClass)
+    .first<{ count: number; first_end: number | null; last_end: number | null }>();
+
+  return {
+    since,
+    months,
+    inserted,
+    detail,
+    stored: { count: stored?.count ?? 0, firstEndTime: stored?.first_end ?? null, lastEndTime: stored?.last_end ?? null },
+  };
 }
