@@ -25,6 +25,15 @@ function row(end_time: number, my_rating: number, outcome: ChessOutcome = "W", o
     final_fen: "8/8/8/8/8/8/8/8 w - - 0 1",
     last_move_from: null,
     last_move_to: null,
+    opp_result: null,
+    termination: null,
+    eco: null,
+    opening_family: null,
+    ply_count: null,
+    time_control: null,
+    cc_accuracy_me: null,
+    cc_accuracy_opp: null,
+    pgn: null,
   };
 }
 

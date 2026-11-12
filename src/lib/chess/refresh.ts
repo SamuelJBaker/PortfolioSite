@@ -88,33 +88,47 @@ export async function fetchArchiveRows(kv: CacheKv, month: string): Promise<Ches
   return mapArchive(data, chess.username, chess.timeClass);
 }
 
-/** INSERT OR IGNORE in batches; returns the number of new rows. */
+const ROW_COLUMNS = [
+  "game_url", "end_time", "time_class", "my_color", "my_rating", "my_result", "outcome",
+  "opp_username", "opp_rating", "eco_url", "opening_name", "final_fen", "last_move_from", "last_move_to",
+  "opp_result", "termination", "eco", "opening_family", "ply_count", "time_control",
+  "cc_accuracy_me", "cc_accuracy_opp", "pgn",
+] as const satisfies readonly (keyof ChessGameRow)[];
+
+/** Columns a re-ingest may change on an existing row (the derived set from migration 0004). */
+const DERIVED_COLUMNS = [
+  "opp_result", "termination", "eco", "opening_family", "ply_count", "time_control",
+  "cc_accuracy_me", "cc_accuracy_opp", "pgn",
+] as const;
+
+/**
+ * Upsert in batches, keyed on game_url. New rows insert; existing rows get
+ * their derived columns refreshed (so a backfill re-run is the re-derive).
+ * Returns the number of newly inserted rows.
+ */
 export async function upsertRows(db: D1Database, rows: ChessGameRow[]): Promise<number> {
   const stmt = db.prepare(
-    `INSERT OR IGNORE INTO chess_games
-       (game_url, end_time, time_class, my_color, my_rating, my_result, outcome,
-        opp_username, opp_rating, eco_url, opening_name, final_fen, last_move_from, last_move_to)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+    `INSERT INTO chess_games (${ROW_COLUMNS.join(", ")})
+     VALUES (${ROW_COLUMNS.map(() => "?").join(", ")})
+     ON CONFLICT(game_url) DO UPDATE SET ${DERIVED_COLUMNS.map((c) => `${c} = excluded.${c}`).join(", ")}`
   );
-  let inserted = 0;
+  const existing = new Set<string>();
   for (let i = 0; i < rows.length; i += BATCH_SIZE) {
-    const batch = rows.slice(i, i + BATCH_SIZE).map((r) =>
-      stmt.bind(
-        r.game_url, r.end_time, r.time_class, r.my_color, r.my_rating, r.my_result, r.outcome,
-        r.opp_username, r.opp_rating, r.eco_url, r.opening_name, r.final_fen, r.last_move_from, r.last_move_to
-      )
-    );
-    const results = await db.batch(batch);
-    for (const res of results) inserted += res.meta?.changes ?? 0;
+    const slice = rows.slice(i, i + BATCH_SIZE);
+    const found = await db
+      .prepare(`SELECT game_url FROM chess_games WHERE game_url IN (${slice.map(() => "?").join(", ")})`)
+      .bind(...slice.map((r) => r.game_url))
+      .all<{ game_url: string }>();
+    for (const f of found.results ?? []) existing.add(f.game_url);
+    await db.batch(slice.map((r) => stmt.bind(...ROW_COLUMNS.map((c) => r[c]))));
   }
-  return inserted;
+  return rows.filter((r) => !existing.has(r.game_url)).length;
 }
 
 export async function readRows(db: D1Database): Promise<ChessGameRow[]> {
   const result = await db
     .prepare(
-      `SELECT game_url, end_time, time_class, my_color, my_rating, my_result, outcome,
-              opp_username, opp_rating, eco_url, opening_name, final_fen, last_move_from, last_move_to
+      `SELECT ${ROW_COLUMNS.join(", ")}
        FROM chess_games WHERE time_class = ? AND end_time >= ? ORDER BY end_time`
     )
     .bind(chess.timeClass, monthStartSec(chess.backfillSince))

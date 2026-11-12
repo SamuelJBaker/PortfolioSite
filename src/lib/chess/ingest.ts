@@ -1,4 +1,4 @@
-import type { ChessColor, ChessGameRow, ChessOutcome } from "./types";
+import type { ChessColor, ChessGameRow, ChessOutcome, ChessTermination } from "./types";
 
 /** The fields of a chess.com monthly-archive game this mapper reads. */
 export interface ArchiveSide {
@@ -13,9 +13,12 @@ export interface ArchiveGame {
   rated?: boolean;
   rules?: string;
   time_class?: string;
+  time_control?: string;
   fen?: string;
   eco?: string;
   pgn?: string;
+  /** Present only on games that had a chess.com Game Review. */
+  accuracies?: { white?: number; black?: number };
   white?: ArchiveSide;
   black?: ArchiveSide;
 }
@@ -50,6 +53,66 @@ export function openingNameFromEcoUrl(ecoUrl: string | null | undefined): string
   return words.length ? words.join(" ") : null;
 }
 
+/**
+ * How the game ended, from the two raw result codes. The loser's code names
+ * the mechanism ("checkmated", "resigned", "timeout", "abandoned"); draws
+ * carry the same code on both sides.
+ */
+export function terminationFrom(myResult: string, oppResult: string | null): ChessTermination {
+  const loser = myResult === "win" ? (oppResult ?? "") : myResult;
+  switch (loser) {
+    case "checkmated":
+      return "checkmate";
+    case "resigned":
+      return "resign";
+    case "timeout":
+      return "timeout";
+    case "abandoned":
+      return "abandoned";
+    case "stalemate":
+      return "stalemate";
+    case "repetition":
+      return "repetition";
+    case "agreed":
+      return "agreed";
+    case "insufficient":
+    case "timevsinsufficient":
+      return "insufficient";
+    default:
+      return "other";
+  }
+}
+
+const FAMILY_WORDS = new Set(["Variation", "Defense", "Attack", "Gambit", "System"]);
+
+/** Opening name up to and including the first family word; the full name when none. */
+export function openingFamily(name: string | null): string | null {
+  if (!name) return null;
+  const words = name.split(" ");
+  const idx = words.findIndex((w) => FAMILY_WORDS.has(w));
+  return idx === -1 ? name : words.slice(0, idx + 1).join(" ");
+}
+
+/** A PGN header value, or null. */
+export function pgnTag(pgn: string | undefined, tag: string): string | null {
+  if (!pgn) return null;
+  const m = new RegExp(`\\[${tag} "([^"]*)"\\]`).exec(pgn);
+  return m ? m[1] : null;
+}
+
+/** Half-moves in the movetext: SAN tokens after comments, move numbers and the result are dropped. */
+export function plyCount(pgn: string | undefined): number | null {
+  if (!pgn) return null;
+  const split = pgn.indexOf("\n\n");
+  const movetext = (split === -1 ? pgn : pgn.slice(split + 2)).replace(/\{[^}]*\}/g, " ").replace(/\([^)]*\)/g, " ");
+  let count = 0;
+  for (const token of movetext.split(/\s+/)) {
+    if (!token || /^\d+\.+$/.test(token) || /^(1-0|0-1|1\/2-1\/2|\*)$/.test(token)) continue;
+    count++;
+  }
+  return count;
+}
+
 /** ECOUrl header from a PGN, used when the archive game has no eco field. */
 export function ecoUrlFromPgn(pgn: string | undefined): string | null {
   if (!pgn) return null;
@@ -76,6 +139,10 @@ export function mapArchiveGame(raw: ArchiveGame, username: string, timeClass: st
   if (typeof mine.rating !== "number" || typeof opp.rating !== "number" || !mine.result || !opp.username) return null;
 
   const ecoUrl = raw.eco ?? ecoUrlFromPgn(raw.pgn);
+  const openingName = openingNameFromEcoUrl(ecoUrl);
+  const oppResult = opp.result ?? null;
+  const myAcc = raw.accuracies?.[myColor];
+  const oppAcc = raw.accuracies?.[myColor === "white" ? "black" : "white"];
 
   return {
     game_url: raw.url,
@@ -88,10 +155,19 @@ export function mapArchiveGame(raw: ArchiveGame, username: string, timeClass: st
     opp_username: opp.username,
     opp_rating: opp.rating,
     eco_url: ecoUrl,
-    opening_name: openingNameFromEcoUrl(ecoUrl),
+    opening_name: openingName,
     final_fen: raw.fen,
     last_move_from: null,
     last_move_to: null,
+    opp_result: oppResult,
+    termination: terminationFrom(mine.result, oppResult),
+    eco: pgnTag(raw.pgn, "ECO"),
+    opening_family: openingFamily(openingName),
+    ply_count: plyCount(raw.pgn),
+    time_control: raw.time_control ?? pgnTag(raw.pgn, "TimeControl"),
+    cc_accuracy_me: typeof myAcc === "number" ? myAcc : null,
+    cc_accuracy_opp: typeof oppAcc === "number" ? oppAcc : null,
+    pgn: raw.pgn ?? null,
   };
 }
 

@@ -20,7 +20,30 @@ export interface ChessGameRow {
   final_fen: string;
   last_move_from: string | null;
   last_move_to: string | null;
+  /** Derived fields (migration 0004); null on rows not yet re-ingested. */
+  opp_result: string | null;
+  termination: ChessTermination | null;
+  eco: string | null;
+  opening_family: string | null;
+  ply_count: number | null;
+  time_control: string | null;
+  cc_accuracy_me: number | null;
+  cc_accuracy_opp: number | null;
+  pgn: string | null;
 }
+
+export const TERMINATIONS = [
+  "checkmate",
+  "resign",
+  "timeout",
+  "abandoned",
+  "stalemate",
+  "repetition",
+  "agreed",
+  "insufficient",
+  "other",
+] as const;
+export type ChessTermination = (typeof TERMINATIONS)[number];
 
 export interface ChessHistoryPoint {
   /** Unix seconds of the last game that day. */
