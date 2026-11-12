@@ -2,8 +2,9 @@ import { chess } from "@/content/chess";
 import type { CacheKv } from "@/lib/cache";
 import { delay, fetchJson } from "@/lib/http";
 import { mapArchive, type ArchiveResponse } from "./ingest";
+import { replayFromPgn } from "./replay";
 import { monthStartSec, summarize } from "./summary";
-import type { ChessGameRow, ChessSummary } from "./types";
+import type { ChessGameRow, ChessGameView, ChessSummary } from "./types";
 
 /**
  * Server-side refresh and backfill for the chess card. Every chess.com call
@@ -36,6 +37,18 @@ export const CHESS_FALLBACK: ChessSummary = {
   low: null,
   lastGame: null,
   bestWin: null,
+  series: [],
+  form: [],
+  streak: { current: { kind: null, length: 0 }, bestWin: 0 },
+  colorSplit: {
+    white: { games: 0, w: 0, l: 0, d: 0, scorePct: 0 },
+    black: { games: 0, w: 0, l: 0, d: 0, scorePct: 0 },
+  },
+  openings: [],
+  endings: { wins: {}, losses: {}, draws: {} },
+  expectation: { games: 0, actual: 0, expected: 0, delta: 0 },
+  activity: [],
+  review: null,
   fetchedAt: 0,
 };
 
@@ -136,10 +149,21 @@ export async function readRows(db: D1Database): Promise<ChessGameRow[]> {
   return result.results ?? [];
 }
 
-/** Summary from D1 alone (admin page, and after stats were fetched). */
+function withReplay(view: ChessGameView | null, rows: ChessGameRow[]): ChessGameView | null {
+  if (!view) return null;
+  const row = rows.find((r) => r.game_url === view.url);
+  return { ...view, replay: replayFromPgn(row?.pgn) };
+}
+
+/** Summary from D1 alone (admin page, and after stats were fetched), with board replays attached. */
 export async function summarizeFromDb(db: D1Database, statsRating: number | null, now = new Date()): Promise<ChessSummary> {
   const rows = await readRows(db);
-  return summarize(rows, { rating: statsRating }, chess, Math.floor(now.getTime() / 1000));
+  const summary = summarize(rows, { rating: statsRating }, chess, Math.floor(now.getTime() / 1000));
+  return {
+    ...summary,
+    lastGame: withReplay(summary.lastGame, rows),
+    bestWin: withReplay(summary.bestWin, rows),
+  };
 }
 
 /**

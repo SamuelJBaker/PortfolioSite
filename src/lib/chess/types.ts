@@ -45,6 +45,43 @@ export const TERMINATIONS = [
 ] as const;
 export type ChessTermination = (typeof TERMINATIONS)[number];
 
+import type {
+  ActivityCell,
+  ColorStats,
+  EndingStats,
+  ExpectationStats,
+  OpeningStat,
+  SeriesPoint,
+  StreakInfo,
+} from "./stats";
+
+/** Board replay for one game, generated server-side from the stored PGN. */
+export interface ChessReplay {
+  /** sans[i] is ply i + 1. */
+  sans: string[];
+  /** fens[0] is the start position, fens[i] the position after ply i. */
+  fens: string[];
+  /** [from, to] squares per ply. */
+  lastMoves: [string, string][];
+}
+
+/** A game as the card shows it (last game, best win). */
+export interface ChessGameView {
+  url: string;
+  endTime: number;
+  myColor: ChessColor;
+  outcome: ChessOutcome;
+  oppRating: number;
+  opening: string | null;
+  openingUrl: string | null;
+  fen: string;
+  /** Null when the row has no PGN yet (stored before migration 0004). */
+  replay: ChessReplay | null;
+}
+
+/** Filled by phase 6c (move review); null until then. */
+export type ChessReview = Record<string, unknown>;
+
 export interface ChessHistoryPoint {
   /** Unix seconds of the last game that day. */
   t: number;
@@ -74,16 +111,21 @@ export interface ChessSummary {
   d30Ref: { t: number; rating: number; fallback: boolean } | null;
   /** min(my_rating) since backfillSince, earliest occurrence. */
   low: { rating: number; t: number } | null;
-  lastGame: {
-    url: string;
-    endTime: number;
-    myColor: ChessColor;
-    outcome: ChessOutcome;
-    oppRating: number;
-    opening: string | null;
-    fen: string;
-  } | null;
-  bestWin: { url: string; oppRating: number; endTime: number } | null;
+  lastGame: ChessGameView | null;
+  /** Highest-rated opponent beaten since trackSince. */
+  bestWin: ChessGameView | null;
+  /** One point per UTC day with games since backfillSince, oldest first. */
+  series: SeriesPoint[];
+  /** Last 10 outcomes, newest last. */
+  form: ChessOutcome[];
+  streak: StreakInfo;
+  colorSplit: Record<ChessColor, ColorStats>;
+  openings: OpeningStat[];
+  endings: EndingStats;
+  expectation: ExpectationStats;
+  /** One cell per day over the last 12 weeks, oldest first. */
+  activity: ActivityCell[];
+  review: ChessReview | null;
   /** Unix ms. */
   fetchedAt: number;
 }

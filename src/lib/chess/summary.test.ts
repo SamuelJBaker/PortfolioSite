@@ -112,7 +112,13 @@ describe("summarize", () => {
 
   it("reports the last game and the best win since trackSince", () => {
     expect(s.lastGame).toMatchObject({ endTime: NOV + 11 * DAY, outcome: "L", oppRating: 650, opening: "Englund Gambit" });
-    expect(s.bestWin).toMatchObject({ oppRating: 700, endTime: NOV + 1 * DAY });
+    expect(s.bestWin).toMatchObject({ oppRating: 700, endTime: NOV + 1 * DAY, outcome: "W", replay: null });
+    expect(s.lastGame?.replay).toBeNull();
+    expect(s.series.map((p) => p.date)).toEqual(["2026-10-21", "2026-10-26", "2026-11-02", "2026-11-10", "2026-11-12"]);
+    expect(s.form).toEqual(["L", "L", "W", "W", "D", "W", "L"]);
+    expect(s.streak).toEqual({ current: { kind: "L", length: 1 }, bestWin: 2 });
+    expect(s.activity).toHaveLength(84);
+    expect(s.review).toBeNull();
     expect(s.fetchedAt).toBe(now * 1000);
   });
 

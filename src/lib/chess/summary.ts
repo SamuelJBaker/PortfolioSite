@@ -1,4 +1,5 @@
-import { HISTORY_MAX_POINTS, type ChessGameRow, type ChessSummary } from "./types";
+import { activityOf, buildSeries, colorSplitOf, endingsOf, expectationOf, formOf, openingsOf, streaksOf } from "./stats";
+import { HISTORY_MAX_POINTS, type ChessGameRow, type ChessGameView, type ChessSummary } from "./types";
 
 export interface SummaryConfig {
   username: string;
@@ -20,6 +21,21 @@ const DAY_SEC = 86400;
 export function monthStartSec(yyyyMm: string): number {
   const [y, m] = yyyyMm.split("-").map(Number);
   return Date.UTC(y, m - 1, 1) / 1000;
+}
+
+/** The card's view of a row. `replay` is attached server-side (refresh.ts). */
+export function gameView(r: ChessGameRow): ChessGameView {
+  return {
+    url: r.game_url,
+    endTime: r.end_time,
+    myColor: r.my_color,
+    outcome: r.outcome,
+    oppRating: r.opp_rating,
+    opening: r.opening_name,
+    openingUrl: r.eco_url,
+    fen: r.final_fen,
+    replay: null,
+  };
 }
 
 /**
@@ -61,11 +77,9 @@ export function summarize(
     else record.draw++;
   }
 
-  let bestWin: ChessSummary["bestWin"] = null;
+  let bestWinRow: ChessGameRow | null = null;
   for (const r of tracked) {
-    if (r.outcome === "W" && (!bestWin || r.opp_rating > bestWin.oppRating)) {
-      bestWin = { url: r.game_url, oppRating: r.opp_rating, endTime: r.end_time };
-    }
+    if (r.outcome === "W" && (!bestWinRow || r.opp_rating > bestWinRow.opp_rating)) bestWinRow = r;
   }
 
   // d30: rating now minus the rating after the latest game with
@@ -95,18 +109,17 @@ export function summarize(
     deltas,
     d30Ref,
     low,
-    lastGame: last
-      ? {
-          url: last.game_url,
-          endTime: last.end_time,
-          myColor: last.my_color,
-          outcome: last.outcome,
-          oppRating: last.opp_rating,
-          opening: last.opening_name,
-          fen: last.final_fen,
-        }
-      : null,
-    bestWin,
+    lastGame: last ? gameView(last) : null,
+    bestWin: bestWinRow ? gameView(bestWinRow) : null,
+    series: buildSeries(all),
+    form: formOf(all),
+    streak: streaksOf(all),
+    colorSplit: colorSplitOf(all),
+    openings: openingsOf(all),
+    endings: endingsOf(all),
+    expectation: expectationOf(all),
+    activity: activityOf(all, nowSec),
+    review: null,
     fetchedAt: nowSec * 1000,
   };
 }
