@@ -2,7 +2,7 @@
 
 import { getCloudflareContext } from "@opennextjs/cloudflare";
 import { redirect } from "next/navigation";
-import { ASSET_KEY_PATTERN } from "@/lib/assets";
+import { ASSET_KEY_PATTERN, defaultAssetKey } from "@/lib/assets";
 
 interface CloudflareEnv {
   R2_ASSETS: R2Bucket;
@@ -21,7 +21,7 @@ export async function uploadAsset(formData: FormData) {
   if (file.size > MAX_UPLOAD_BYTES) throw new Error("File is larger than 25 MB.");
 
   const keyInput = formData.get("key");
-  const key = (typeof keyInput === "string" && keyInput.trim()) || file.name;
+  const key = (typeof keyInput === "string" && keyInput.trim()) || defaultAssetKey(file.name);
   if (!ASSET_KEY_PATTERN.test(key) || key.includes("..") || key.includes("//")) {
     throw new Error("Key must match ^[a-z0-9/_.-]+$ with no empty or dot-dot segments.");
   }
@@ -29,7 +29,8 @@ export async function uploadAsset(formData: FormData) {
   const ctx = await getCloudflareContext({ async: true });
   const env = ctx.env as unknown as CloudflareEnv;
 
-  await env.R2_ASSETS.put(key, file.stream(), {
+  // Pass the File itself: R2 needs a known length, which file.stream() lacks.
+  await env.R2_ASSETS.put(key, file, {
     httpMetadata: { contentType: file.type || "application/octet-stream" },
   });
 

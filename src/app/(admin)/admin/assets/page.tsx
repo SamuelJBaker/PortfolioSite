@@ -1,6 +1,7 @@
 import * as React from "react";
 import { getCloudflareContext } from "@opennextjs/cloudflare";
 import { ASSET_BASE, assetUrl } from "@/lib/assets";
+import { AssetFileInput } from "@/components/admin/AssetFileInput";
 import { uploadAsset } from "./actions";
 
 export const dynamic = "force-dynamic";
@@ -58,22 +59,24 @@ export default async function AssetsPage() {
       <h2 className="text-lg font-medium mb-4">Upload</h2>
       <form
         action={uploadAsset}
-        encType="multipart/form-data"
         className="rounded-2xl border border-line bg-panel/35 p-5 mb-12 max-w-lg space-y-4"
       >
         <div>
           <label className="block text-sm text-body mb-1">File (max 25 MB)</label>
-          <input name="file" type="file" required className="block w-full text-sm text-body" />
+          <AssetFileInput keyInputId="asset-key" />
         </div>
         <div>
-          <label className="block text-sm text-body mb-1">Key</label>
+          <label htmlFor="asset-key" className="block text-sm text-body mb-1">Key</label>
           <input
+            id="asset-key"
             name="key"
-            placeholder="defaults to the file name, e.g. resume/samuel_baker_resume.pdf"
+            placeholder="prefilled from the file name, e.g. resume/samuel_baker_resume.pdf"
             pattern="[a-z0-9/_.\-]+"
             className={INPUT}
           />
-          <p className="mt-1 text-xs text-neutral-500">Allowed: a-z 0-9 / _ . -</p>
+          <p className="mt-1 text-xs text-neutral-500">
+            Allowed: a-z 0-9 / _ . - (lowercase). Uploading to an existing key replaces it.
+          </p>
         </div>
         <button
           type="submit"

@@ -7,3 +7,11 @@ export const ASSET_KEY_PATTERN = /^[a-z0-9/_.-]+$/;
 export function assetUrl(key: string): string {
   return `${ASSET_BASE}/${key.replace(/^\/+/, "")}`;
 }
+
+/** Default key for an uploaded file: lowercased name with anything outside the pattern replaced by "-". */
+export function defaultAssetKey(fileName: string): string {
+  return fileName
+    .toLowerCase()
+    .replace(/[^a-z0-9/_.-]+/g, "-")
+    .replace(/^[-/]+/, "");
+}
