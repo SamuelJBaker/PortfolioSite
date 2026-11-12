@@ -26,6 +26,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
               <a href="/admin/keys" className="hover:text-neutral-100 transition">Keys</a>
               <a href="/admin/now" className="hover:text-neutral-100 transition">Now</a>
               <a href="/admin/assets" className="hover:text-neutral-100 transition">Assets</a>
+              <a href="/admin/chess" className="hover:text-neutral-100 transition">Chess</a>
             </nav>
           </div>
           <div className="flex items-center gap-4 text-xs">
