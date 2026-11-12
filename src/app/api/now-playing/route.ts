@@ -1,3 +1,5 @@
+import { getCloudflareContext } from "@opennextjs/cloudflare";
+
 type LastFmImage = { ["#text"]?: string; size?: string };
 type LastFmTrack = {
   name?: string;
@@ -23,19 +25,42 @@ function asArray<T>(v: T | T[] | undefined): T[] {
   return Array.isArray(v) ? v : [v];
 }
 
+interface CloudflareEnv {
+  LASTFM_API_KEY?: string;
+  LASTFM_USER?: string;
+}
+
+// Upstream budget per Last.fm call; the client polls every 15 s.
+const UPSTREAM_TIMEOUT_MS = 4_000;
+
+async function readSecrets(): Promise<{ apiKey?: string; user?: string }> {
+  try {
+    const ctx = await getCloudflareContext({ async: true });
+    const env = ctx.env as unknown as CloudflareEnv;
+    if (env.LASTFM_API_KEY && env.LASTFM_USER) {
+      return { apiKey: env.LASTFM_API_KEY, user: env.LASTFM_USER };
+    }
+  } catch {
+    // No Cloudflare context (plain next start); fall through to process.env.
+  }
+  // Dev fallback only: .env* under next dev.
+  return { apiKey: process.env.LASTFM_API_KEY, user: process.env.LASTFM_USER };
+}
+
 export async function GET() {
-  const apiKey = process.env.LASTFM_API_KEY;
-  const user = process.env.LASTFM_USER;
+  const { apiKey, user } = await readSecrets();
 
   const cacheHeaders = {
     // Cloudflare cache (s-maxage) for 5s, allow serving stale while revalidating for 30s
     "Cache-Control": "public, s-maxage=5, stale-while-revalidate=30",
-};
+  };
+  // Failures must not be cached at the edge (F38).
+  const errorHeaders = { "Cache-Control": "no-store" };
 
   if (!apiKey || !user) {
     return Response.json(
       { ok: false, error: "Missing LASTFM_API_KEY or LASTFM_USER." },
-      { status: 500, headers: cacheHeaders }
+      { status: 500, headers: errorHeaders }
     );
   }
 
@@ -50,12 +75,13 @@ export async function GET() {
     const res = await fetch(url.toString(), {
       cache: "no-store",
       headers: { "User-Agent": "samueljbaker.dev (Last.fm now-playing)" },
+      signal: AbortSignal.timeout(UPSTREAM_TIMEOUT_MS),
     });
 
     if (!res.ok) {
       return Response.json(
         { ok: false, error: `Last.fm HTTP ${res.status}` },
-        { status: 502, headers: cacheHeaders }
+        { status: 502, headers: errorHeaders }
       );
     }
 
@@ -92,6 +118,7 @@ export async function GET() {
       const infoRes = await fetch(infoUrl.toString(), {
         cache: "no-store",
         headers: { "User-Agent": "samueljbaker.dev (Last.fm now-playing)" },
+        signal: AbortSignal.timeout(UPSTREAM_TIMEOUT_MS),
       });
 
       if (infoRes.ok) {
@@ -116,7 +143,7 @@ export async function GET() {
   } catch {
     return Response.json(
       { ok: false, error: "Failed to reach Last.fm." },
-      { status: 502, headers: cacheHeaders }
+      { status: 502, headers: errorHeaders }
     );
   }
 }

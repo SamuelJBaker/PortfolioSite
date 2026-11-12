@@ -50,6 +50,20 @@ interface BeaconBody {
   key?: string;
 }
 
+// -- Referral key from the Referer -----------------------------------------------
+// /v/[key] redirects to /?__sid=...&__key=... so while the page URL still carries
+// __key, the browser's Referer header does too. That value is set by our own
+// redirect, so it outranks whatever the client put in the body (F15).
+function keyFromReferer(referer: string | null): string | undefined {
+  if (!referer) return undefined;
+  try {
+    const key = new URL(referer).searchParams.get("__key");
+    return key ? key.trim().toLowerCase() : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
 // -- POST handler --------------------------------------------------------------
 export async function POST(request: NextRequest) {
   // Always return 204 regardless of outcome - beacon is fire-and-forget.
@@ -68,7 +82,11 @@ export async function POST(request: NextRequest) {
       return new NextResponse(null, { status: 204 });
     }
 
-    const { sessionId, event, payload, key } = body;
+    const { sessionId, event, payload } = body;
+
+    // Prefer the Referer's own key; a client-supplied key that differs from it is ignored.
+    const refererKey = keyFromReferer(request.headers.get("referer"));
+    const key = refererKey ?? body.key;
 
     // sessionId is required - without it we can't correlate events
     if (!sessionId || typeof sessionId !== "string" || sessionId.length > 64) {
