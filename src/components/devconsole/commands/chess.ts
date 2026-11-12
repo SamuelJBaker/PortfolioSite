@@ -1,30 +1,71 @@
 import { chess } from "../../../content/chess";
 import { formatDelta, lastGameLine, monthLabel } from "../../../lib/chess/format";
+import type { OpeningStat } from "../../../lib/chess/stats";
 import type { ChessSummary } from "../../../lib/chess/types";
 import { register } from "../registry";
 
+async function loadSummary(): Promise<ChessSummary | null> {
+  try {
+    const res = await fetch("/api/chess");
+    const s = (await res.json()) as ChessSummary;
+    return s.ok ? s : null;
+  } catch {
+    return null;
+  }
+}
+
+function pad(text: string, width: number, right = false): string {
+  const t = text.length > width ? text.slice(0, width - 1) + "~" : text;
+  return right ? t.padStart(width) : t.padEnd(width);
+}
+
+const COLOR_LABEL: Record<OpeningStat["color"], string> = { white: "W", black: "B", both: "W+B" };
+
+/** The openings table as aligned monospace text. */
+export function openingsTable(openings: OpeningStat[]): string[] {
+  if (openings.length === 0) return ["no openings yet"];
+  const nameWidth = Math.min(44, Math.max(7, ...openings.map((o) => o.name.length)));
+  const lines = [`${pad("opening", nameWidth)}  ${pad("color", 5)}  ${pad("games", 5, true)}  ${pad("w-l-d", 8, true)}  ${pad("score", 6, true)}`];
+  for (const o of openings) {
+    lines.push(
+      `${pad(o.name, nameWidth)}  ${pad(COLOR_LABEL[o.color], 5)}  ${pad(String(o.games), 5, true)}  ${pad(`${o.w}-${o.l}-${o.d}`, 8, true)}  ${pad(`${o.scorePct}%`, 6, true)}`
+    );
+  }
+  return lines;
+}
+
+function streakText(s: ChessSummary): string {
+  const { kind, length } = s.streak.current;
+  if (!kind || length === 0) return "none";
+  const word = kind === "W" ? "win" : kind === "L" ? "loss" : "draw";
+  return `${length} ${word}${length === 1 ? "" : kind === "L" ? "es" : "s"}`;
+}
+
 register({
   name: "chess",
-  summary: "Current rapid rating, deltas and the last game",
-  run: async (_args, ctx) => {
-    let s: ChessSummary;
-    try {
-      const res = await fetch("/api/chess");
-      s = (await res.json()) as ChessSummary;
-    } catch {
+  summary: "Rapid rating, deltas, form, streak, top opening; 'chess openings' for the table",
+  usage: "chess [openings]",
+  run: async ([sub], ctx) => {
+    const s = await loadSummary();
+    if (!s) {
       ctx.print("chess: stats unavailable.", "err");
       return;
     }
-    if (!s.ok) {
-      ctx.print("chess: stats unavailable.", "err");
+    if ((sub ?? "").toLowerCase() === "openings") {
+      for (const line of openingsTable(s.openings)) ctx.print(line);
       return;
     }
     const peak = s.peak !== null ? ` (peak ${s.peak})` : "";
+    const d30Label = s.d30Ref?.fallback ? "since first game" : "30 days";
     ctx.print(`${chess.displayName}: rapid ${s.rating ?? "--"}${peak}, goal ${s.goal}`);
     ctx.print(
-      `30 days ${formatDelta(s.deltas.d30)} | since ${monthLabel(chess.trackSince)} ${formatDelta(s.deltas.sinceTrack)} | from low ${formatDelta(s.deltas.fromLow)}`
+      `${d30Label} ${formatDelta(s.deltas.d30)} | since ${monthLabel(chess.trackSince)} ${formatDelta(s.deltas.sinceTrack)} | from low ${formatDelta(s.deltas.fromLow)}`
     );
+    if (s.form.length) ctx.print(`form: ${s.form.join(" ")} | streak: ${streakText(s)} | best win streak: ${s.streak.bestWin}`);
+    const top = s.openings.find((o) => o.name !== "Other");
+    if (top) ctx.print(`top opening: ${top.name} as ${COLOR_LABEL[top.color].toLowerCase()}, ${top.games} games, ${top.scorePct}%`);
     if (s.lastGame) ctx.printLink(`last: ${lastGameLine(s.lastGame)}`, s.lastGame.url);
     else ctx.print("last: no rated game yet", "sys");
   },
+  complete: (partial) => ["openings"].filter((o) => o.startsWith(partial.toLowerCase())),
 });
