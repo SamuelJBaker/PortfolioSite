@@ -3,10 +3,12 @@
 import * as React from "react";
 import { chess, chessProfileUrl } from "../../content/chess";
 import { dayLabel, formatDelta, lastGameLine, monthLabel } from "../../lib/chess/format";
-import type { ChessSummary } from "../../lib/chess/types";
+import type { ChessGameView, ChessSummary } from "../../lib/chess/types";
 import { ExternalLinkIcon } from "../icons";
+import { Board } from "../chess/Board";
+import { FormStrip } from "../chess/FormStrip";
+import { SegmentedToggle } from "../chess/GameToggle";
 import { PieceDefs } from "../chess/Pieces";
-import { ChessBoardSvg } from "./ChessBoardSvg";
 import { NowCard } from "./NowCard";
 import { RatingSparkline } from "./RatingSparkline";
 
@@ -33,6 +35,41 @@ function Footer() {
         {chess.displayName}
       </a>
     </p>
+  );
+}
+
+type Shown = "last" | "best";
+
+/** Board column: which game, the replay board, and the form strip. */
+function BoardColumn({ s }: { s: ChessSummary }) {
+  const [shown, setShown] = React.useState<Shown>("last");
+  const game: ChessGameView | null = shown === "best" && s.bestWin ? s.bestWin : s.lastGame;
+  if (!game) return <div className="h-40 w-40 shrink-0 rounded-xl border border-line bg-neutral-950/40" />;
+  const replay = game.replay;
+  return (
+    <div className="w-full shrink-0 sm:w-56">
+      {s.bestWin && s.bestWin.url !== s.lastGame?.url ? (
+        <div className="mb-2">
+          <SegmentedToggle
+            label="Game shown on the board"
+            value={shown}
+            onChange={setShown}
+            options={[
+              { value: "last", label: "Last game" },
+              { value: "best", label: "Best win" },
+            ]}
+          />
+        </div>
+      ) : null}
+      <Board
+        fens={replay ? replay.fens : [game.fen]}
+        sans={replay ? replay.sans : []}
+        lastMoves={replay ? replay.lastMoves : []}
+        myColor={game.myColor}
+        outcome={game.outcome}
+      />
+      <FormStrip form={s.form} />
+    </div>
   );
 }
 
@@ -97,11 +134,7 @@ export function ChessCard() {
     <NowCard title={TITLE} footer={<Footer />}>
       <PieceDefs />
       <div className={"mt-4 flex flex-col gap-6 sm:flex-row " + BODY_MIN_H}>
-        <div className="h-40 w-40 shrink-0 overflow-hidden rounded-xl border border-line bg-neutral-950/40">
-          {s.lastGame ? (
-            <ChessBoardSvg fen={s.lastGame.fen} myColor={s.lastGame.myColor} outcome={s.lastGame.outcome} className="h-full w-full" />
-          ) : null}
-        </div>
+        <BoardColumn s={s} />
 
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
