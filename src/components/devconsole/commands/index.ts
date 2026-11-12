@@ -9,6 +9,7 @@ import "./ls";
 import "./open";
 import "./whoami";
 import "./uses";
+import "./chess";
 import "./goto";
 import "./roll";
 import "./seed";

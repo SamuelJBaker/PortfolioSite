@@ -1,3 +1,4 @@
+import { chessProfileUrl } from "../../../content/chess";
 import { profile } from "../../../content/profile";
 import { register } from "../registry";
 
@@ -7,11 +8,12 @@ const targets: Record<string, () => string> = {
   linkedin: () => profile.linkedin,
   uses: () => "/uses",
   email: () => `mailto:${profile.email}`,
+  chess: () => chessProfileUrl,
 };
 
 register({
   name: "open",
-  summary: "Opens resume, github, linkedin, uses, or email",
+  summary: "Opens resume, github, linkedin, uses, email, or chess",
   usage: "open <target>",
   run: ([target], ctx) => {
     const key = (target ?? "").toLowerCase();
