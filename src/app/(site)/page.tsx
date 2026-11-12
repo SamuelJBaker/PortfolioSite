@@ -20,6 +20,7 @@ import { SiteFooter } from "../../components/SiteFooter";
 import { SiteNav } from "../../components/SiteNav";
 import { NowListening } from "../../components/now/NowListening";
 import { NowReading } from "../../components/now/NowReading";
+import { ChessCard } from "../../components/now/ChessCard";
 
 // Pre-generated WebP variants (640, 1280); the image loader in next.config maps
 // each srcSet width onto one of them.
@@ -329,6 +330,9 @@ export default function Page() {
             <div className="grid gap-6 lg:grid-cols-2">
               <NowReading />
               <NowListening />
+              <div className="min-w-0 lg:col-span-2">
+                <ChessCard />
+              </div>
             </div>
           </Section>
         </div>
