@@ -36,6 +36,14 @@
       "binding": "ANALYTICS_KV",
       "id": "dc806ff898404552b4da8ac8603be06e"
     }
+  ],
+  // Served publicly at https://assets.samueljbaker.dev (src/lib/assets.ts).
+  // Named R2_ASSETS because OpenNext reserves the ASSETS binding for static files.
+  "r2_buckets": [
+    {
+      "binding": "R2_ASSETS",
+      "bucket_name": "sjb-assets"
+    }
   ]
 	/**
 	 * Smart Placement

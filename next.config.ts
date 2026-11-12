@@ -8,6 +8,10 @@ const pkgVersion = (name: string) =>
 const buildSha = process.env.CF_PAGES_COMMIT_SHA ?? process.env.WORKERS_CI_COMMIT_SHA;
 
 const nextConfig: NextConfig = {
+  experimental: {
+    // /admin/assets uploads go through a server action; default cap is 1 MB.
+    serverActions: { bodySizeLimit: "25mb" },
+  },
   images: {
     // The built-in optimizer is a pass-through on OpenNext Cloudflare in this
     // setup (production /_next/image returns the original file), so a custom

@@ -1,3 +1,5 @@
+import { assetUrl } from "../lib/assets";
+
 export type Link = { label: string; href: string; external?: boolean };
 
 export type Project = {
@@ -66,7 +68,7 @@ export const projects: Project[] = [
       "Designed a classical CV pipeline (blur, shifted modified-Otsu thresholding, contour and ellipse/shape-color matching) for mobile, low-connectivity use with too little labeled data for CNNs; classified every test sample correctly.",
       "Improved threshold selection from a fixed value to modified Otsu with a translational shift, enabling correct health-condition classification on all test samples while reducing testing cost and turnaround versus the manual McMaster workflow.",
     ],
-    links: [{ label: "Read report (PDF)", href: "/papers/EggsByTheDozen.pdf" }],
+    links: [{ label: "Read report (PDF)", href: assetUrl("papers/EggsByTheDozen.pdf") }],
     featured: true,
   },
   {
@@ -105,7 +107,7 @@ export const projects: Project[] = [
       "Ran controlled inoculation study on soybeans (n=60, 6 groups, 2 trials) under 70% / 100% / 130% water-holding capacity over 7-8 weeks.",
       "Found significant differences in shoot dry mass (p=0.007-0.023) and chlorophyll (p=0.014-0.032); presented at Chesapeake Bay Governor's School symposium (VCU).",
     ],
-    links: [{ label: "Read paper (PDF)", href: "/papers/SeniorProject.pdf" }],
+    links: [{ label: "Read paper (PDF)", href: assetUrl("papers/SeniorProject.pdf") }],
     featured: false,
   },
 ];
