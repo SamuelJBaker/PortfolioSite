@@ -6,257 +6,269 @@ import * as React from "react";
 interface BeaconPayload {
   sessionId: string;
   event: string;
-  key?: string;
   payload?: Record<string, unknown>;
 }
 
 // -- Constants -----------------------------------------------------------------
 const SESSION_KEY = "sjb_sid";
-const SESSION_KEY_REF = "sjb_key";
+const FIRED_KEY = "sjb_fired";
 
-// Scroll depth checkpoints to fire once each per session
-const SCROLL_CHECKPOINTS = [25, 50, 75, 100] as const;
+// Section ids observed for section_view (fires once each at 50 percent).
+const SECTIONS = ["experience", "projects", "skills", "education", "resume", "now", "contact"];
 
-// Minimum dwell time before a section_dwell event is worth logging (ms)
-const MIN_DWELL_MS = 2000;
-
-// Section IDs to observe for dwell tracking
-const TRACKED_SECTIONS = ["experience", "projects", "skills", "resume", "now", "contact"];
+// engaged needs the page visible for this long first.
+const ENGAGED_VISIBLE_MS = 5000;
+const ENGAGED_SCROLL_PCT = 25;
+// Scroll position is sampled at most this often; the scroll listener itself only schedules.
+const SCROLL_SAMPLE_MS = 250;
 
 // -- Fire-and-forget beacon send -----------------------------------------------
 // Never throws. All analytics failures are silent.
-function sendBeacon(data: BeaconPayload): void {
+function send(data: BeaconPayload, unload = false): void {
   try {
     const body = JSON.stringify(data);
-
-    // navigator.sendBeacon is preferred for session_end (survives page unload)
-    // but falls back to fetch with keepalive for all other events.
-    if (
-      data.event === "session_end" &&
-      typeof navigator !== "undefined" &&
-      navigator.sendBeacon
-    ) {
-      const blob = new Blob([body], { type: "application/json" });
-      navigator.sendBeacon("/api/beacon", blob);
+    if (unload && typeof navigator !== "undefined" && navigator.sendBeacon) {
+      navigator.sendBeacon("/api/beacon", new Blob([body], { type: "application/json" }));
       return;
     }
-
     fetch("/api/beacon", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body,
       keepalive: true,
-    }).catch(() => {
-      // Silently swallow network errors
-    });
-  } catch {
-    // Silently swallow serialization or other errors
-  }
+    }).catch(() => {});
+  } catch {}
 }
 
 // -- Session ID resolution -----------------------------------------------------
-// Priority: URL __sid param (set by /v/[key] redirect) > existing sessionStorage > new UUID
+// Priority: URL __sid param (set by /v/[key] redirect) > existing sessionStorage > new UUID.
+// The key is never sent: the beacon route takes it from the session's visit_server row.
 function resolveSessionId(): string {
   try {
-    // Check if we arrived via a /v/[key] referral redirect
     const urlParams = new URLSearchParams(window.location.search);
     const urlSid = urlParams.get("__sid");
     if (urlSid) {
       sessionStorage.setItem(SESSION_KEY, urlSid);
-      // Clean __sid from URL without triggering a navigation
       urlParams.delete("__sid");
       urlParams.delete("__key");
       const newUrl =
-        window.location.pathname +
-        (urlParams.toString() ? `?${urlParams.toString()}` : "") +
-        window.location.hash;
+        window.location.pathname + (urlParams.toString() ? `?${urlParams.toString()}` : "") + window.location.hash;
       window.history.replaceState(null, "", newUrl);
       return urlSid;
     }
-
-    // Reuse existing session (same tab, same session)
     const existing = sessionStorage.getItem(SESSION_KEY);
     if (existing) return existing;
-
-    // Generate a new session ID
     const newId = crypto.randomUUID();
     sessionStorage.setItem(SESSION_KEY, newId);
     return newId;
   } catch {
-    // sessionStorage unavailable (private mode, etc.) - use a throwaway ID
     return crypto.randomUUID();
   }
 }
 
-// -- Referral key resolution ---------------------------------------------------
-function resolveKey(): string | undefined {
+// -- Once-per-session bookkeeping ----------------------------------------------
+// Stored in sessionStorage so a reload inside the same session does not repeat
+// an event; a throwaway Set when storage is unavailable.
+function loadFired(sessionId: string): Set<string> {
   try {
-    const urlParams = new URLSearchParams(window.location.search);
-    const urlKey = urlParams.get("__key");
-    if (urlKey) {
-      sessionStorage.setItem(SESSION_KEY_REF, urlKey);
-      return urlKey;
+    const raw = sessionStorage.getItem(FIRED_KEY);
+    if (raw) {
+      const parsed = JSON.parse(raw) as { sid: string; fired: string[] };
+      if (parsed.sid === sessionId) return new Set(parsed.fired);
     }
-    return sessionStorage.getItem(SESSION_KEY_REF) ?? undefined;
+  } catch {}
+  return new Set();
+}
+
+function saveFired(sessionId: string, fired: Set<string>): void {
+  try {
+    sessionStorage.setItem(FIRED_KEY, JSON.stringify({ sid: sessionId, fired: [...fired] }));
+  } catch {}
+}
+
+function scrollPercent(): number {
+  const max = document.documentElement.scrollHeight - window.innerHeight;
+  if (max <= 0) return 100;
+  return Math.min(100, Math.max(0, Math.round((window.scrollY / max) * 100)));
+}
+
+/** Which outbound target an anchor is, or null. */
+function outboundTarget(href: string): "github" | "linkedin" | "email" | null {
+  if (href.startsWith("mailto:")) return "email";
+  try {
+    const host = new URL(href, window.location.href).hostname;
+    if (host === "github.com" || host.endsWith(".github.com")) return "github";
+    if (host === "linkedin.com" || host.endsWith(".linkedin.com")) return "linkedin";
+  } catch {}
+  return null;
+}
+
+/** A same-origin PDF link is the resume. */
+function isResumeLink(a: HTMLAnchorElement): boolean {
+  try {
+    const u = new URL(a.href, window.location.href);
+    return u.origin === window.location.origin && u.pathname.toLowerCase().endsWith(".pdf");
   } catch {
-    return undefined;
+    return false;
   }
 }
 
 // -- Main component ------------------------------------------------------------
 export function AnalyticsBeacon() {
-  const sessionIdRef = React.useRef<string | null>(null);
-  const keyRef = React.useRef<string | undefined>(undefined);
-  const startTimeRef = React.useRef<number>(Date.now());
-  const scrollCheckpointsFired = React.useRef<Set<number>>(new Set());
-  const sectionEntryTimes = React.useRef<Map<string, number>>(new Map());
-  const sectionDwellFired = React.useRef<Set<string>>(new Set());
-
   React.useEffect(() => {
-    // -- Resolve session identity ----------------------------------------------
     const sessionId = resolveSessionId();
-    const key = resolveKey();
-    sessionIdRef.current = sessionId;
-    keyRef.current = key;
-    startTimeRef.current = Date.now();
+    const fired = loadFired(sessionId);
 
-    // -- visit_confirmed: only once per session, not on every reload -----------
-    const CONFIRMED_KEY = "sjb_confirmed";
-    const alreadyConfirmed = sessionStorage.getItem(CONFIRMED_KEY) === sessionId;
-    if (!alreadyConfirmed) {
-      sendBeacon({ sessionId, event: "visit_confirmed", key });
-      try { sessionStorage.setItem(CONFIRMED_KEY, sessionId); } catch {}
-    }
+    // Emits an event once per session for the given dedupe id.
+    const once = (id: string, event: string, payload?: Record<string, unknown>) => {
+      if (fired.has(id)) return;
+      fired.add(id);
+      saveFired(sessionId, fired);
+      send({ sessionId, event, payload });
+    };
 
-    // -- scroll_depth: fire once per checkpoint --------------------------------
-    const handleScroll = () => {
-      const scrollTop = window.scrollY;
-      const docHeight =
-        document.documentElement.scrollHeight - window.innerHeight;
-      if (docHeight <= 0) return;
+    // -- visit_confirmed: once per session, drives has_js on the server --------
+    once("visit_confirmed", "visit_confirmed");
 
-      const pct = Math.round((scrollTop / docHeight) * 100);
+    // -- Visibility clock and scroll depth -------------------------------------
+    let visibleSince = document.visibilityState === "visible" ? Date.now() : null;
+    let visibleAcc = 0;
+    const visibleMs = () => visibleAcc + (visibleSince !== null ? Date.now() - visibleSince : 0);
+    let maxScroll = 0;
+    let interacted = false;
+    let engagedTimer: ReturnType<typeof setTimeout> | null = null;
 
-      for (const checkpoint of SCROLL_CHECKPOINTS) {
-        if (pct >= checkpoint && !scrollCheckpointsFired.current.has(checkpoint)) {
-          scrollCheckpointsFired.current.add(checkpoint);
-          sendBeacon({
-            sessionId,
-            event: "scroll_depth",
-            key,
-            payload: { depth: checkpoint },
-          });
-        }
+    const tryEngaged = () => {
+      if (fired.has("engaged")) return;
+      if (!(interacted || maxScroll >= ENGAGED_SCROLL_PCT)) return;
+      const remaining = ENGAGED_VISIBLE_MS - visibleMs();
+      if (remaining <= 0) {
+        once("engaged", "engaged");
+      } else if (engagedTimer === null) {
+        engagedTimer = setTimeout(() => {
+          engagedTimer = null;
+          tryEngaged();
+        }, remaining + 50);
       }
     };
 
-    window.addEventListener("scroll", handleScroll, { passive: true });
+    const onInteract = () => {
+      if (interacted) return;
+      interacted = true;
+      tryEngaged();
+    };
 
-    // -- section_dwell: IntersectionObserver per tracked section ---------------
-    const observer = new IntersectionObserver(
-      (entries) => {
-        for (const entry of entries) {
-          const sectionId = entry.target.id;
-          if (!sectionId) continue;
+    let scrollTimer: ReturnType<typeof setTimeout> | null = null;
+    const sampleScroll = () => {
+      scrollTimer = null;
+      const pct = scrollPercent();
+      if (pct > maxScroll) {
+        maxScroll = pct;
+        if (pct >= ENGAGED_SCROLL_PCT) tryEngaged();
+      }
+    };
+    // The listener only schedules a sample; nothing runs per scroll frame.
+    const onScroll = () => {
+      if (scrollTimer === null) scrollTimer = setTimeout(sampleScroll, SCROLL_SAMPLE_MS);
+    };
 
-          if (entry.isIntersecting) {
-            // Section entered viewport - record entry time
-            sectionEntryTimes.current.set(sectionId, Date.now());
-          } else {
-            // Section left viewport - compute dwell time
-            const entryTime = sectionEntryTimes.current.get(sectionId);
-            if (entryTime == null) continue;
+    // -- dwell: on every hide, may repeat ----------------------------------------
+    const sendDwell = () => {
+      send({ sessionId, event: "dwell", payload: { visible_ms: visibleMs(), max_scroll_pct: maxScroll } }, true);
+    };
+    const onVisibility = () => {
+      if (document.visibilityState === "hidden") {
+        if (visibleSince !== null) {
+          visibleAcc += Date.now() - visibleSince;
+          visibleSince = null;
+        }
+        sendDwell();
+      } else if (visibleSince === null) {
+        visibleSince = Date.now();
+        tryEngaged();
+      }
+    };
+    let hidden = false;
+    const onPageHide = () => {
+      if (hidden) return;
+      hidden = true;
+      if (document.visibilityState !== "hidden") sendDwell();
+    };
 
-            const ms = Date.now() - entryTime;
-            sectionEntryTimes.current.delete(sectionId);
+    // -- Clicks: resume, project and outbound ----------------------------------
+    const onClick = (e: MouseEvent) => {
+      const a = (e.target as HTMLElement | null)?.closest?.("a");
+      if (!a) return;
+      const href = a.getAttribute("href") ?? "";
+      const project = a.closest<HTMLElement>("[data-project]")?.dataset.project;
+      if (project) {
+        once(`project:${project}`, "project_click", { project });
+        return;
+      }
+      if (isResumeLink(a)) {
+        const event = a.hasAttribute("download") ? "resume_download" : "resume_open";
+        once(event, event);
+        return;
+      }
+      const target = outboundTarget(href);
+      if (target) once(`outbound:${target}`, "outbound_click", { target });
+    };
 
-            // Only log meaningful dwell, and only once per section per session
-            if (ms >= MIN_DWELL_MS && !sectionDwellFired.current.has(sectionId)) {
-              sectionDwellFired.current.add(sectionId);
-              sendBeacon({
-                sessionId,
-                event: "section_dwell",
-                key,
-                payload: { section: sectionId, ms },
-              });
+    // -- Observers and listeners, registered after first paint -----------------
+    let observer: IntersectionObserver | null = null;
+    let registered = false;
+    const register = () => {
+      registered = true;
+      window.addEventListener("scroll", onScroll, { passive: true });
+      window.addEventListener("pointerdown", onInteract, { passive: true });
+      window.addEventListener("keydown", onInteract, { passive: true });
+      document.addEventListener("click", onClick);
+      document.addEventListener("visibilitychange", onVisibility);
+      window.addEventListener("pagehide", onPageHide);
+
+      if ("IntersectionObserver" in window) {
+        observer = new IntersectionObserver(
+          (entries) => {
+            for (const entry of entries) {
+              const id = entry.target.id;
+              if (!id || !entry.isIntersecting) continue;
+              // Half the section, or a section filling half the viewport (tall sections never reach 0.5).
+              const viewport = entry.rootBounds?.height ?? window.innerHeight;
+              if (entry.intersectionRatio >= 0.5 || entry.intersectionRect.height >= viewport * 0.5) {
+                once(`section:${id}`, "section_view", { section: id });
+                observer?.unobserve(entry.target);
+              }
             }
-          }
+          },
+          { threshold: [0.1, 0.25, 0.5] }
+        );
+        for (const id of SECTIONS) {
+          if (fired.has(`section:${id}`)) continue;
+          const el = document.getElementById(id);
+          if (el) observer.observe(el);
         }
-      },
-      { threshold: 0.3 } // section must be 30% visible to count
-    );
-
-    for (const id of TRACKED_SECTIONS) {
-      const el = document.getElementById(id);
-      if (el) observer.observe(el);
-    }
-
-    // -- link_click: event delegation on document ------------------------------
-    const handleClick = (e: MouseEvent) => {
-      const target = (e.target as HTMLElement).closest("a");
-      if (!target) return;
-
-      const href = target.getAttribute("href") ?? "";
-      const label = (target.textContent ?? "").trim().slice(0, 128);
-
-      // Only log external links and named anchor links - skip internal nav
-      const isExternal = href.startsWith("http");
-      const isAnchor = href.startsWith("#");
-      const isFile = href.includes(".pdf");
-
-      if (isExternal || isAnchor || isFile) {
-        sendBeacon({
-          sessionId,
-          event: "link_click",
-          key,
-          payload: { href: href.slice(0, 512), label },
-        });
       }
+      sampleScroll();
     };
 
-    document.addEventListener("click", handleClick);
+    const idle = window.requestIdleCallback ?? ((cb: () => void) => setTimeout(cb, 200));
+    const cancelIdle = window.cancelIdleCallback ?? ((h: number) => clearTimeout(h));
+    const idleHandle = idle(register);
 
-    // -- session_end: pagehide fires reliably on tab close / navigation --------
-const handlePageHide = () => {
-  const ENDED_KEY = "sjb_ended";
-  try {
-    if (sessionStorage.getItem(ENDED_KEY) === sessionId) return;
-    sessionStorage.setItem(ENDED_KEY, sessionId);
-  } catch {}
-
-  const duration_ms = Date.now() - startTimeRef.current;
-  sendBeacon({
-    sessionId,
-    event: "session_end",
-    key,
-    payload: { duration_ms },
-  });
-
-  // Flush sections still in viewport
-  for (const [sectionId, entryTime] of sectionEntryTimes.current.entries()) {
-    const ms = Date.now() - entryTime;
-    if (ms >= MIN_DWELL_MS && !sectionDwellFired.current.has(sectionId)) {
-      sendBeacon({
-        sessionId,
-        event: "section_dwell",
-        key,
-        payload: { section: sectionId, ms },
-      });
-    }
-  }
-};
-
-    window.addEventListener("pagehide", handlePageHide);
-
-    // -- Cleanup ---------------------------------------------------------------
     return () => {
-      window.removeEventListener("scroll", handleScroll);
-      window.removeEventListener("pagehide", handlePageHide);
-      document.removeEventListener("click", handleClick);
-      observer.disconnect();
+      cancelIdle(idleHandle);
+      if (engagedTimer !== null) clearTimeout(engagedTimer);
+      if (scrollTimer !== null) clearTimeout(scrollTimer);
+      if (!registered) return;
+      window.removeEventListener("scroll", onScroll);
+      window.removeEventListener("pointerdown", onInteract);
+      window.removeEventListener("keydown", onInteract);
+      document.removeEventListener("click", onClick);
+      document.removeEventListener("visibilitychange", onVisibility);
+      window.removeEventListener("pagehide", onPageHide);
+      observer?.disconnect();
     };
-  }, []); // Runs once on mount
+  }, []);
 
-  // Renders nothing - purely a side-effect component
   return null;
 }

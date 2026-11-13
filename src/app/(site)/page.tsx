@@ -226,6 +226,7 @@ export default function Page() {
               {featuredProjects.map((p, i) => (
                 <motion.article
                   key={p.slug}
+                  data-project={p.slug}
                   initial={{ opacity: 0, y: 12 }}
                   whileInView={{ opacity: 1, y: 0 }}
                   viewport={{ once: true, amount: 0.25 }}
@@ -272,7 +273,7 @@ export default function Page() {
                 <summary className="cursor-pointer text-sm font-medium text-neutral-200">Earlier work</summary>
                 <ul className="mt-4 space-y-6">
                   {earlierProjects.map((p) => (
-                    <li key={p.slug}>
+                    <li key={p.slug} data-project={p.slug}>
                       <div className="flex flex-wrap items-baseline justify-between gap-3">
                         <p className="text-sm font-medium text-neutral-100">{p.title}</p>
                         <p className="text-xs text-neutral-500">{p.timeframe}</p>

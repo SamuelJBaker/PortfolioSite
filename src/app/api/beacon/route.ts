@@ -1,67 +1,35 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { getCloudflareContext } from "@opennextjs/cloudflare";
+import {
+  isBeaconEvent,
+  isValidSessionId,
+  normalizePayload,
+  resolveEventKey,
+  type SessionLookup,
+} from "@/lib/tracking/beacon";
 
 // -- Cloudflare env type -------------------------------------------------------
 interface CloudflareEnv {
   ANALYTICS_DB: D1Database;
 }
 
-// -- Event payload shapes ------------------------------------------------------
-interface ScrollDepthPayload {
-  depth: 25 | 50 | 75 | 100;
-}
-
-interface SectionDwellPayload {
-  section: string;
-  ms: number;
-}
-
-interface LinkClickPayload {
-  href: string;
-  label: string;
-}
-
-interface SessionEndPayload {
-  duration_ms: number;
-}
-
-type EventPayload =
-  | ScrollDepthPayload
-  | SectionDwellPayload
-  | LinkClickPayload
-  | SessionEndPayload
-  | Record<string, unknown>;
-
-// -- Valid event names (allowlist) ---------------------------------------------
-const VALID_EVENTS = new Set([
-  "visit_confirmed",
-  "scroll_depth",
-  "section_dwell",
-  "link_click",
-  "session_end",
-]);
-
 // -- Request body shape --------------------------------------------------------
 interface BeaconBody {
-  sessionId: string;
-  event: string;
-  payload?: EventPayload;
-  // Optional: key passed from /v/[key] redirect via __key query param
-  key?: string;
+  sessionId?: unknown;
+  event?: unknown;
+  payload?: unknown;
 }
 
-// -- Referral key from the Referer -----------------------------------------------
-// /v/[key] redirects to /?__sid=...&__key=... so while the page URL still carries
-// __key, the browser's Referer header does too. That value is set by our own
-// redirect, so it outranks whatever the client put in the body (F15).
-function keyFromReferer(referer: string | null): string | undefined {
-  if (!referer) return undefined;
-  try {
-    const key = new URL(referer).searchParams.get("__key");
-    return key ? key.trim().toLowerCase() : undefined;
-  } catch {
-    return undefined;
-  }
+/** The session's visit_server row from D1 (idx_events_session). */
+function sessionLookup(db: D1Database): SessionLookup {
+  return {
+    visitServerRow(sessionId) {
+      return db
+        .prepare("SELECT key FROM events WHERE session_id = ? AND event = 'visit_server' ORDER BY id LIMIT 1")
+        .bind(sessionId)
+        .first<{ key: string | null }>();
+    },
+  };
 }
 
 // -- POST handler --------------------------------------------------------------
@@ -84,22 +52,22 @@ export async function POST(request: NextRequest) {
 
     const { sessionId, event, payload } = body;
 
-    // Prefer the Referer's own key; a client-supplied key that differs from it is ignored.
-    const refererKey = keyFromReferer(request.headers.get("referer"));
-    const key = refererKey ?? body.key;
-
     // sessionId is required - without it we can't correlate events
-    if (!sessionId || typeof sessionId !== "string" || sessionId.length > 64) {
+    if (!isValidSessionId(sessionId)) {
       return new NextResponse(null, { status: 204 });
     }
 
     // Only accept known event names to prevent garbage data
-    if (!VALID_EVENTS.has(event)) {
+    if (!isBeaconEvent(event)) {
       return new NextResponse(null, { status: 204 });
     }
 
+    // The key comes from the session's visit_server row only. Anything the
+    // client sent (body key, Referer) is ignored (src/lib/tracking/beacon.ts).
+    const key = await resolveEventKey(sessionLookup(db), sessionId);
+
     const ts = new Date().toISOString();
-    const payloadJson = payload ? JSON.stringify(payload) : null;
+    const payloadJson = normalizePayload(payload);
 
     // -- Write event to D1 -----------------------------------------------------
     await db
@@ -109,13 +77,7 @@ export async function POST(request: NextRequest) {
         VALUES
           (?, ?, NULL, ?, ?, NULL, NULL, NULL, NULL, NULL, 1, ?)
       `)
-      .bind(
-        sessionId,
-        key && typeof key === "string" ? key.slice(0, 128) : null,
-        event,
-        ts,
-        payloadJson
-      )
+      .bind(sessionId, key, event, ts, payloadJson)
       .run();
 
     // -- Update has_js on the visit_server row for this session ----------------
