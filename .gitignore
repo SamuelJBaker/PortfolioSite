@@ -46,3 +46,6 @@ next-env.d.ts
 
 #I'm a dumbass
 hashpw.js
+# chess review (local Stockfish analysis): downloaded dataset and built book
+/scripts/chess-review/data
+/scripts/chess-review/book.json
