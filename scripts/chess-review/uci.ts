@@ -49,24 +49,51 @@ export function parseInfo(line: string): EngineLine | null {
   return { multipv, cp, mate, pv };
 }
 
+/**
+ * Splits a byte stream into lines and queues them, so a chunk that carries
+ * many lines at once (the engine prints dozens of "info" lines together)
+ * loses nothing: a reader takes queued lines first and waits only when the
+ * queue is empty.
+ */
+export class LineQueue {
+  private buffer = "";
+  private lines: string[] = [];
+  private waiter: ((line: string) => void) | null = null;
+
+  push(chunk: string) {
+    this.buffer += chunk;
+    let idx: number;
+    while ((idx = this.buffer.indexOf("\n")) !== -1) {
+      const line = this.buffer.slice(0, idx).trimEnd();
+      this.buffer = this.buffer.slice(idx + 1);
+      if (this.waiter) {
+        const w = this.waiter;
+        this.waiter = null;
+        w(line);
+      } else {
+        this.lines.push(line);
+      }
+    }
+  }
+
+  next(): Promise<string> {
+    const queued = this.lines.shift();
+    if (queued !== undefined) return Promise.resolve(queued);
+    return new Promise((resolve) => {
+      this.waiter = resolve;
+    });
+  }
+}
+
 export class StockfishEngine implements Engine {
   private proc: ChildProcessWithoutNullStreams;
-  private buffer = "";
-  private waiters: ((line: string) => void)[] = [];
+  private queue = new LineQueue();
   readonly name: string;
 
   private constructor(proc: ChildProcessWithoutNullStreams, name: string) {
     this.proc = proc;
     this.name = name;
-    proc.stdout.on("data", (chunk: Buffer) => {
-      this.buffer += chunk.toString();
-      let idx: number;
-      while ((idx = this.buffer.indexOf("\n")) !== -1) {
-        const line = this.buffer.slice(0, idx).trimEnd();
-        this.buffer = this.buffer.slice(idx + 1);
-        for (const w of this.waiters.splice(0)) w(line);
-      }
-    });
+    proc.stdout.on("data", (chunk: Buffer) => this.queue.push(chunk.toString()));
   }
 
   /** Spawns `command` (default "stockfish" on PATH) and completes the UCI handshake. */
@@ -102,7 +129,7 @@ export class StockfishEngine implements Engine {
   }
 
   private nextLine(): Promise<string> {
-    return new Promise((resolve) => this.waiters.push(resolve));
+    return this.queue.next();
   }
 
   private async ready() {

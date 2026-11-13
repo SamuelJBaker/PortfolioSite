@@ -1,7 +1,7 @@
 import { Chess } from "chess.js";
 import { describe, expect, it } from "vitest";
 import { applyUci, lineCp, materialBalance, positionKey, reviewGame } from "./review.ts";
-import { parseInfo, type Analysis, type Engine } from "./uci.ts";
+import { LineQueue, parseInfo, type Analysis, type Engine } from "./uci.ts";
 
 const START = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
 
@@ -33,6 +33,24 @@ describe("parseInfo", () => {
     expect(parseInfo("info depth 1 score cp 20 pv e2e4")?.multipv).toBe(1);
     expect(parseInfo("info string NNUE evaluation using nn.nnue")).toBeNull();
     expect(parseInfo("bestmove e2e4")).toBeNull();
+  });
+});
+
+describe("LineQueue", () => {
+  it("delivers every line of a multi-line chunk, in order, across awaits", async () => {
+    const q = new LineQueue();
+    q.push("info depth 1 score cp 5 pv e2e4\ninfo depth 2 score cp 7 pv e2e4\nbestmove e2e4\n");
+    expect(await q.next()).toBe("info depth 1 score cp 5 pv e2e4");
+    expect(await q.next()).toBe("info depth 2 score cp 7 pv e2e4");
+    expect(await q.next()).toBe("bestmove e2e4");
+  });
+  it("waits for a line that has not arrived and joins split chunks", async () => {
+    const q = new LineQueue();
+    const pending = q.next();
+    q.push("ready");
+    q.push("ok\nbestmove (none)\n");
+    expect(await pending).toBe("readyok");
+    expect(await q.next()).toBe("bestmove (none)");
   });
 });
 
