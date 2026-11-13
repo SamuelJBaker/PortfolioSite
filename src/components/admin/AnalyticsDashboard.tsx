@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import * as topojson from "topojson-client";
 import type { Topology } from "topojson-specification";
 import type {
-  KeyStat, DayStat, EventStat, CountryStat, KeyDayStat,
+  KeyStat, DayStat, EventStat, CountryStat, KeyDayStat, ClassCounts,
 } from "@/app/(admin)/admin/analytics/page";
 import { countryName } from "@/lib/countries";
 
@@ -47,6 +47,10 @@ type Props = {
   countryStats: CountryStat[];
   keyTimeline: KeyDayStat[];
   liveCount: number;
+  /** Sessions by class over the whole table, before the bot filter. */
+  classCounts: ClassCounts;
+  /** Bot sessions are hidden unless ?bots=1. */
+  showBots: boolean;
 };
 
 // -- Helpers -------------------------------------------------------------------
@@ -275,7 +279,7 @@ function KeyTable({ stats }: { stats: KeyStat[] }) {
 
 // -- Main dashboard ------------------------------------------------------------
 
-export function AnalyticsDashboard({ keyStats, timeline, eventStats, countryStats, keyTimeline, liveCount }: Props) {
+export function AnalyticsDashboard({ keyStats, timeline, eventStats, countryStats, keyTimeline, liveCount, classCounts, showBots }: Props) {
   const router = useRouter();
   const [showTable, setShowTable] = React.useState(false);
   const [expandedKey, setExpandedKey] = React.useState<string | null>(null);
@@ -300,7 +304,16 @@ export function AnalyticsDashboard({ keyStats, timeline, eventStats, countryStat
 
   return (
     <div>
-      <h1 className="text-2xl font-semibold mb-6">Analytics</h1>
+      <h1 className="text-2xl font-semibold mb-2">Analytics</h1>
+      <p className="text-sm text-muted mb-6" data-testid="class-line">
+        Sessions: <span className="text-green-400">{classCounts.human} human</span>, {classCounts.unknown} unknown,{" "}
+        <span className="text-red-400">{classCounts.bot} bot</span>.{" "}
+        {showBots ? (
+          <>Bot sessions are included. <a href="/admin/analytics" className="underline hover:text-neutral-100">Hide bots</a></>
+        ) : (
+          <>Bot sessions are hidden from every figure below. <a href="/admin/analytics?bots=1" className="underline hover:text-neutral-100">Show bots</a></>
+        )}
+      </p>
 
       {/* Stats row */}
       <div className="grid gap-4 sm:grid-cols-4 mb-8">
