@@ -1,5 +1,6 @@
 import { chess } from "../../../content/chess";
 import { formatDelta, lastGameLine, monthLabel } from "../../../lib/chess/format";
+import { CLASSES } from "../../../lib/chess/classify";
 import type { OpeningStat } from "../../../lib/chess/stats";
 import type { ChessSummary } from "../../../lib/chess/types";
 import { register } from "../registry";
@@ -43,8 +44,8 @@ function streakText(s: ChessSummary): string {
 
 register({
   name: "chess",
-  summary: "Rapid rating, deltas, form, streak, top opening; 'chess openings' for the table",
-  usage: "chess [openings]",
+  summary: "Rapid rating, deltas, form, streak, top opening; 'chess openings' or 'chess review'",
+  usage: "chess [openings|review]",
   run: async ([sub], ctx) => {
     const s = await loadSummary();
     if (!s) {
@@ -53,6 +54,21 @@ register({
     }
     if ((sub ?? "").toLowerCase() === "openings") {
       for (const line of openingsTable(s.openings)) ctx.print(line);
+      return;
+    }
+    if ((sub ?? "").toLowerCase() === "review") {
+      const r = s.review;
+      if (!r || r.coverage.reviewed === 0) {
+        ctx.print("chess review: no reviewed games yet.", "sys");
+        return;
+      }
+      const a = r.aggregate;
+      const f = (n: number | null) => (n === null ? "--" : n.toFixed(1));
+      ctx.print(`accuracy ${f(a.avgAcc)} over the last ${a.games} reviewed (wins ${f(a.avgAccWins)}, losses ${f(a.avgAccLosses)})`);
+      ctx.print("per 100 moves: " + CLASSES.filter((c) => a.countsPer100[c]).map((c) => `${c} ${a.countsPer100[c]}`).join(", "));
+      const b = r.blundersPerGame;
+      ctx.print(`blunders per game ${f(b.current)}${b.previous !== null ? ` (previous window ${f(b.previous)})` : ""}`);
+      ctx.print(`coverage ${r.coverage.reviewed}/${r.coverage.total} games; ${r.engine}, depth ${r.depth}; own classification, not chess.com labels`, "sys");
       return;
     }
     const peak = s.peak !== null ? ` (peak ${s.peak})` : "";
@@ -67,5 +83,5 @@ register({
     if (s.lastGame) ctx.printLink(`last: ${lastGameLine(s.lastGame)}`, s.lastGame.url);
     else ctx.print("last: no rated game yet", "sys");
   },
-  complete: (partial) => ["openings"].filter((o) => o.startsWith(partial.toLowerCase())),
+  complete: (partial) => ["openings", "review"].filter((o) => o.startsWith(partial.toLowerCase())),
 });

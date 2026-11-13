@@ -11,6 +11,8 @@ export const dynamic = "force-dynamic";
 export default async function ChessAdminPage() {
   let count = 0;
   let lastEnd: number | null = null;
+  let reviewed = 0;
+  let newestUnreviewed: number | null = null;
   let cachedSummary: CacheEntry<ChessSummary> | null = null;
   let error = false;
 
@@ -24,6 +26,16 @@ export default async function ChessAdminPage() {
       .first<{ count: number; last_end: number | null }>();
     count = stats?.count ?? 0;
     lastEnd = stats?.last_end ?? null;
+    const rv = await ANALYTICS_DB.prepare(
+      `SELECT
+         (SELECT COUNT(*) FROM chess_reviews r JOIN chess_games g ON g.game_url = r.game_url WHERE g.time_class = ?) AS reviewed,
+         (SELECT MAX(g.end_time) FROM chess_games g LEFT JOIN chess_reviews r ON r.game_url = g.game_url
+            WHERE g.time_class = ? AND g.pgn IS NOT NULL AND r.game_url IS NULL) AS newest_unreviewed`
+    )
+      .bind(chess.timeClass, chess.timeClass)
+      .first<{ reviewed: number; newest_unreviewed: number | null }>();
+    reviewed = rv?.reviewed ?? 0;
+    newestUnreviewed = rv?.newest_unreviewed ?? null;
     cachedSummary = await ANALYTICS_KV.get<CacheEntry<ChessSummary>>(CHESS_SUMMARY_KEY, "json");
   } catch (err) {
     console.error("[admin/chess] failed to load:", err);
@@ -59,6 +71,28 @@ export default async function ChessAdminPage() {
           </p>
         </div>
       </div>
+
+      <h2 className="text-lg font-medium mb-3">Move review</h2>
+      <div className="grid gap-4 sm:grid-cols-2 mb-4">
+        <div className="rounded-2xl border border-line bg-panel/35 p-5">
+          <p className="text-xs uppercase tracking-widest text-muted">Reviewed</p>
+          <p className="mt-2 text-3xl font-semibold">
+            {reviewed} <span className="text-base font-normal text-muted">of {count}</span>
+          </p>
+        </div>
+        <div className="rounded-2xl border border-line bg-panel/35 p-5">
+          <p className="text-xs uppercase tracking-widest text-muted">Newest unreviewed game</p>
+          <p className="mt-2 text-lg font-semibold">
+            {newestUnreviewed ? new Date(newestUnreviewed * 1000).toISOString().slice(0, 16).replace("T", " ") + " UTC" : "none"}
+          </p>
+        </div>
+      </div>
+      <p className="text-sm text-muted mb-2">
+        Reviews come from the local Stockfish script, never from this page. On your machine, from the repo:
+      </p>
+      <pre className="overflow-x-auto rounded-2xl border border-line bg-panel/35 p-4 font-mono text-xs text-body mb-10">
+        {"npm run chess:review:book   # once\nnpm run chess:review        # unreviewed games, newest first, writes remote D1"}
+      </pre>
 
       <h2 className="text-lg font-medium mb-3">Backfill</h2>
       <p className="text-sm text-muted mb-4">
