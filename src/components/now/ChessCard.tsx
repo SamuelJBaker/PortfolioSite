@@ -7,6 +7,9 @@ import type { ChessGameView, ChessSummary } from "../../lib/chess/types";
 import { ExternalLinkIcon } from "../icons";
 import { Board } from "../chess/Board";
 import { BreakdownPanel } from "../chess/BreakdownPanel";
+import { CLASS_META, CLASS_ORDER } from "../chess/classes";
+import { EvalStrip } from "../chess/EvalStrip";
+import { ReviewPanel } from "../chess/ReviewPanel";
 import { FormStrip } from "../chess/FormStrip";
 import { SegmentedToggle } from "../chess/GameToggle";
 import { OpeningsPanel } from "../chess/OpeningsPanel";
@@ -16,7 +19,7 @@ import { Tabs, type TabDef } from "../chess/Tabs";
 import { NowCard } from "./NowCard";
 
 type State = { status: "loading" } | { status: "error" } | { status: "ready"; data: ChessSummary };
-type TabId = "overview" | "openings" | "breakdown";
+type TabId = "overview" | "openings" | "breakdown" | "review";
 type Shown = "last" | "best";
 
 const TITLE = "What I am playing";
@@ -28,6 +31,7 @@ const TABS: TabDef<TabId>[] = [
   { id: "openings", label: "Openings" },
   { id: "breakdown", label: "Breakdown" },
 ];
+const REVIEW_TAB: TabDef<TabId> = { id: "review", label: "Review" };
 const ID = "chess";
 
 function Delta({ label, value }: { label: string; value: number | null }) {
@@ -40,14 +44,47 @@ function Delta({ label, value }: { label: string; value: number | null }) {
   );
 }
 
-function Footer() {
+function Footer({ review }: { review?: ChessSummary["review"] }) {
   return (
-    <p className="mt-4 text-xs text-neutral-500">
-      Data from chess.com. Updates about daily.{" "}
-      <a href={chessProfileUrl} target="_blank" rel="noreferrer" className="text-accent/70 hover:text-accent">
-        {chess.displayName}
-      </a>
-    </p>
+    <div className="mt-4 text-xs text-neutral-500">
+      <p>
+        Data from chess.com. Updates about daily.{" "}
+        <a href={chessProfileUrl} target="_blank" rel="noreferrer" className="text-accent/70 hover:text-accent">
+          {chess.displayName}
+        </a>
+      </p>
+      {review ? (
+        <p className="mt-1">
+          Move review: {review.engine}, depth {review.depth}, own classification. Not chess.com labels.
+        </p>
+      ) : null}
+    </div>
+  );
+}
+
+/** Review lines under the form strip: accuracies and my class counts for the shown game. */
+function GameReviewLines({ game }: { game: ChessGameView }) {
+  const r = game.review;
+  if (!r) return null;
+  const fmt = (n: number | null) => (n === null ? "--" : n.toFixed(1));
+  const counts = CLASS_ORDER.filter((c) => r.countsMe[c]);
+  return (
+    <div className="mt-2 font-mono text-xs">
+      <p className="text-body">
+        <span className="text-neutral-500">Accuracy </span>
+        {fmt(r.accMe)} <span className="text-neutral-500">vs</span> {fmt(r.accOpp)}
+        {r.ccAccMe !== null ? <span className="text-neutral-500"> &middot; chess.com: {fmt(r.ccAccMe)}</span> : null}
+      </p>
+      {counts.length ? (
+        <p className="mt-1" aria-label={"My moves: " + counts.map((c) => `${r.countsMe[c]} ${CLASS_META[c].word}`).join(", ")}>
+          {counts.map((c, i) => (
+            <span key={c} className={i ? "ml-2" : ""} style={{ color: CLASS_META[c].color }} title={CLASS_META[c].word}>
+              {CLASS_META[c].glyph || CLASS_META[c].word} {r.countsMe[c]}
+            </span>
+          ))}
+        </p>
+      ) : null}
+    </div>
   );
 }
 
@@ -80,6 +117,7 @@ function BoardColumn({ s }: { s: ChessSummary }) {
     );
   }
   const replay = game.replay;
+  const review = replay ? game.review : null;
   return (
     <div className="w-full shrink-0 md:w-56">
       {s.bestWin && s.bestWin.url !== s.lastGame?.url ? (
@@ -95,15 +133,32 @@ function BoardColumn({ s }: { s: ChessSummary }) {
           />
         </div>
       ) : null}
+      <ReplayBoard key={game.url} game={game} replay={replay} review={review} />
+      <FormStrip form={s.form} />
+      <GameReviewLines game={game} />
+    </div>
+  );
+}
+
+/** Board plus, when the game has a review, the eval strip that scrubs it. */
+function ReplayBoard({ game, replay, review }: { game: ChessGameView; replay: ChessGameView["replay"]; review: ChessGameView["review"] }) {
+  const total = replay ? replay.fens.length - 1 : 0;
+  const [ply, setPly] = React.useState(total);
+  const evals = review && review.moves.length === total ? review.moves.map((m) => m.e) : null;
+  return (
+    <>
       <Board
         fens={replay ? replay.fens : [game.fen]}
         sans={replay ? replay.sans : []}
         lastMoves={replay ? replay.lastMoves : []}
         myColor={game.myColor}
         outcome={game.outcome}
+        ply={evals ? ply : undefined}
+        onPlyChange={evals ? setPly : undefined}
+        moveClasses={evals && review ? review.moves.map((m) => m.c) : undefined}
       />
-      <FormStrip form={s.form} />
-    </div>
+      {evals ? <EvalStrip evals={evals} myColor={game.myColor} ply={ply} onPlyChange={setPly} /> : null}
+    </>
   );
 }
 
@@ -223,6 +278,8 @@ export function ChessCard() {
   }
 
   const s = state.data;
+  const hasReview = !!s.review && s.review.coverage.reviewed > 0;
+  const tabs = hasReview ? [...TABS, REVIEW_TAB] : TABS;
   const panels: { id: TabId; node: React.ReactNode }[] = [
     { id: "overview", node: <Overview s={s} /> },
     { id: "openings", node: <OpeningsPanel openings={s.openings} /> },
@@ -238,10 +295,15 @@ export function ChessCard() {
         />
       ),
     },
+    ...(hasReview && s.review ? [{ id: "review" as const, node: <ReviewPanel review={s.review} /> }] : []),
   ];
 
   return (
-    <NowCard title={TITLE} footer={<Footer />} aside={<Tabs tabs={TABS} value={tab} onChange={setTab} idPrefix={ID} label="Chess card sections" />}>
+    <NowCard
+      title={TITLE}
+      footer={<Footer review={hasReview ? s.review : null} />}
+      aside={<Tabs tabs={tabs} value={tab} onChange={setTab} idPrefix={ID} label="Chess card sections" />}
+    >
       <PieceDefs />
       <div className={"mt-4 flex flex-col gap-6 md:flex-row " + BODY_MIN_H}>
         <BoardColumn s={s} />
