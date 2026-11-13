@@ -35,6 +35,7 @@ export function gameView(r: ChessGameRow): ChessGameView {
     openingUrl: r.eco_url,
     fen: r.final_fen,
     replay: null,
+    review: null,
   };
 }
 
