@@ -1,5 +1,6 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { getCloudflareContext } from "@opennextjs/cloudflare";
+import { firstOpen } from "@/lib/tracking/visit";
 
 // -- Cloudflare env type -------------------------------------------------------
 interface CloudflareEnv {
@@ -29,17 +30,6 @@ function classifyTier(referer: string | null, hasKey: boolean): number {
   if (r.includes("linkedin.com")) return 2;
   if (ATS_PATTERNS.some((p) => r.includes(p))) return 3;
   return 4;
-}
-
-// -- IP hashing ----------------------------------------------------------------
-// Never store raw IPs. SHA-256, keep first 8 hex chars only.
-async function hashIp(ip: string): Promise<string> {
-  const encoded = new TextEncoder().encode(ip);
-  const buffer = await crypto.subtle.digest("SHA-256", encoded);
-  const hex = Array.from(new Uint8Array(buffer))
-    .map((b) => b.toString(16).padStart(2, "0"))
-    .join("");
-  return hex.slice(0, 8);
 }
 
 // -- Route handler -------------------------------------------------------------
@@ -87,23 +77,14 @@ export async function GET(
     const referer = request.headers.get("referer")?.slice(0, 512) ?? null;
     const ua = request.headers.get("user-agent")?.slice(0, 512) ?? null;
     const ip = request.headers.get("cf-connecting-ip") ?? "unknown";
-    const ipHash = await hashIp(ip);
 
     const tier = classifyTier(referer, validKey);
 
     // -- KV deduplication: first-open detection --------------------------------
-    // Key: "visit:{key}:{ipHash}" - expires after 24 hours.
-    // Lets us flag whether a given referral key was opened multiple times
-    // from the same hashed IP (e.g. hiring manager opens the link twice).
-    const dedupKey = `visit:${normalizedKey}:${ipHash}`;
-    const alreadySeen = await kv.get(dedupKey);
-    const isFirstOpen = alreadySeen === null;
-
-    if (isFirstOpen) {
-      await kv.put(dedupKey, new Date().toISOString(), {
-        expirationTtl: 86400, // 24 hours
-      });
-    }
+    // Key: "visit:{key}:{ipHash}" - expires after 24 hours. The hash is an
+    // HMAC with a daily salt (src/lib/tracking/visit.ts); never the raw IP.
+    // Only a valid, active key touches KV; otherwise isFirstOpen is null.
+    const { isFirstOpen } = await firstOpen(kv, validKey, normalizedKey, ip, new Date());
 
     // -- Generate a session ID for this server-side hit ------------------------
     // Passed to the client via redirect query param so the beacon can use the
