@@ -2,8 +2,9 @@ import { chess } from "@/content/chess";
 import type { CacheKv } from "@/lib/cache";
 import { delay, fetchJson } from "@/lib/http";
 import { mapArchive, type ArchiveResponse } from "./ingest";
+import { replayFromPgn } from "./replay";
 import { monthStartSec, summarize } from "./summary";
-import type { ChessGameRow, ChessSummary } from "./types";
+import type { ChessGameRow, ChessGameView, ChessSummary } from "./types";
 
 /**
  * Server-side refresh and backfill for the chess card. Every chess.com call
@@ -32,9 +33,22 @@ export const CHESS_FALLBACK: ChessSummary = {
   record: { win: 0, loss: 0, draw: 0 },
   history: [],
   deltas: { d30: null, sinceTrack: null, fromLow: null },
+  d30Ref: null,
   low: null,
   lastGame: null,
   bestWin: null,
+  series: [],
+  form: [],
+  streak: { current: { kind: null, length: 0 }, bestWin: 0 },
+  colorSplit: {
+    white: { games: 0, w: 0, l: 0, d: 0, scorePct: 0 },
+    black: { games: 0, w: 0, l: 0, d: 0, scorePct: 0 },
+  },
+  openings: [],
+  endings: { wins: {}, losses: {}, draws: {} },
+  expectation: { games: 0, actual: 0, expected: 0, delta: 0 },
+  activity: [],
+  review: null,
   fetchedAt: 0,
 };
 
@@ -87,33 +101,47 @@ export async function fetchArchiveRows(kv: CacheKv, month: string): Promise<Ches
   return mapArchive(data, chess.username, chess.timeClass);
 }
 
-/** INSERT OR IGNORE in batches; returns the number of new rows. */
+const ROW_COLUMNS = [
+  "game_url", "end_time", "time_class", "my_color", "my_rating", "my_result", "outcome",
+  "opp_username", "opp_rating", "eco_url", "opening_name", "final_fen", "last_move_from", "last_move_to",
+  "opp_result", "termination", "eco", "opening_family", "ply_count", "time_control",
+  "cc_accuracy_me", "cc_accuracy_opp", "pgn",
+] as const satisfies readonly (keyof ChessGameRow)[];
+
+/** Columns a re-ingest may change on an existing row (the derived set from migration 0004). */
+const DERIVED_COLUMNS = [
+  "opp_result", "termination", "eco", "opening_family", "ply_count", "time_control",
+  "cc_accuracy_me", "cc_accuracy_opp", "pgn",
+] as const;
+
+/**
+ * Upsert in batches, keyed on game_url. New rows insert; existing rows get
+ * their derived columns refreshed (so a backfill re-run is the re-derive).
+ * Returns the number of newly inserted rows.
+ */
 export async function upsertRows(db: D1Database, rows: ChessGameRow[]): Promise<number> {
   const stmt = db.prepare(
-    `INSERT OR IGNORE INTO chess_games
-       (game_url, end_time, time_class, my_color, my_rating, my_result, outcome,
-        opp_username, opp_rating, eco_url, opening_name, final_fen, last_move_from, last_move_to)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+    `INSERT INTO chess_games (${ROW_COLUMNS.join(", ")})
+     VALUES (${ROW_COLUMNS.map(() => "?").join(", ")})
+     ON CONFLICT(game_url) DO UPDATE SET ${DERIVED_COLUMNS.map((c) => `${c} = excluded.${c}`).join(", ")}`
   );
-  let inserted = 0;
+  const existing = new Set<string>();
   for (let i = 0; i < rows.length; i += BATCH_SIZE) {
-    const batch = rows.slice(i, i + BATCH_SIZE).map((r) =>
-      stmt.bind(
-        r.game_url, r.end_time, r.time_class, r.my_color, r.my_rating, r.my_result, r.outcome,
-        r.opp_username, r.opp_rating, r.eco_url, r.opening_name, r.final_fen, r.last_move_from, r.last_move_to
-      )
-    );
-    const results = await db.batch(batch);
-    for (const res of results) inserted += res.meta?.changes ?? 0;
+    const slice = rows.slice(i, i + BATCH_SIZE);
+    const found = await db
+      .prepare(`SELECT game_url FROM chess_games WHERE game_url IN (${slice.map(() => "?").join(", ")})`)
+      .bind(...slice.map((r) => r.game_url))
+      .all<{ game_url: string }>();
+    for (const f of found.results ?? []) existing.add(f.game_url);
+    await db.batch(slice.map((r) => stmt.bind(...ROW_COLUMNS.map((c) => r[c]))));
   }
-  return inserted;
+  return rows.filter((r) => !existing.has(r.game_url)).length;
 }
 
 export async function readRows(db: D1Database): Promise<ChessGameRow[]> {
   const result = await db
     .prepare(
-      `SELECT game_url, end_time, time_class, my_color, my_rating, my_result, outcome,
-              opp_username, opp_rating, eco_url, opening_name, final_fen, last_move_from, last_move_to
+      `SELECT ${ROW_COLUMNS.join(", ")}
        FROM chess_games WHERE time_class = ? AND end_time >= ? ORDER BY end_time`
     )
     .bind(chess.timeClass, monthStartSec(chess.backfillSince))
@@ -121,10 +149,21 @@ export async function readRows(db: D1Database): Promise<ChessGameRow[]> {
   return result.results ?? [];
 }
 
-/** Summary from D1 alone (admin page, and after stats were fetched). */
+function withReplay(view: ChessGameView | null, rows: ChessGameRow[]): ChessGameView | null {
+  if (!view) return null;
+  const row = rows.find((r) => r.game_url === view.url);
+  return { ...view, replay: replayFromPgn(row?.pgn) };
+}
+
+/** Summary from D1 alone (admin page, and after stats were fetched), with board replays attached. */
 export async function summarizeFromDb(db: D1Database, statsRating: number | null, now = new Date()): Promise<ChessSummary> {
   const rows = await readRows(db);
-  return summarize(rows, { rating: statsRating }, chess, Math.floor(now.getTime() / 1000));
+  const summary = summarize(rows, { rating: statsRating }, chess, Math.floor(now.getTime() / 1000));
+  return {
+    ...summary,
+    lastGame: withReplay(summary.lastGame, rows),
+    bestWin: withReplay(summary.bestWin, rows),
+  };
 }
 
 /**
@@ -148,16 +187,57 @@ export async function loadChessSummary(env: ChessEnv, now = new Date()): Promise
   return summarizeFromDb(env.ANALYTICS_DB, rating, now);
 }
 
-/** Walks every archive month from backfillSince to now, serially. */
-export async function backfill(env: ChessEnv, now = new Date()): Promise<{ months: string[]; inserted: number }> {
-  const months = monthsSince(chess.backfillSince, now);
+export interface BackfillMonth {
+  month: string;
+  /** Rows the archive mapped to (rated games in the tracked time class). */
+  mapped: number;
+  /** Rows that were new to D1. */
+  inserted: number;
+}
+
+export interface BackfillResult {
+  since: string;
+  months: string[];
+  inserted: number;
+  detail: BackfillMonth[];
+  /** chess_games state after the walk. */
+  stored: { count: number; firstEndTime: number | null; lastEndTime: number | null };
+}
+
+export function isYearMonth(value: unknown): value is string {
+  return typeof value === "string" && /^\d{4}-(0[1-9]|1[0-2])$/.test(value);
+}
+
+/**
+ * Walks every archive month from `since` (default backfillSince) to now,
+ * serially, 250 ms apart. INSERT OR IGNORE on game_url, so re-running is
+ * safe; months already fetched return 304 through the stored ETag.
+ */
+export async function backfill(env: ChessEnv, since: string = chess.backfillSince, now = new Date()): Promise<BackfillResult> {
+  const months = monthsSince(since, now);
+  const detail: BackfillMonth[] = [];
   let inserted = 0;
   for (let i = 0; i < months.length; i++) {
     if (i > 0) await delay(BACKFILL_GAP_MS);
     const rows = await fetchArchiveRows(env.ANALYTICS_KV, months[i]);
-    inserted += await upsertRows(env.ANALYTICS_DB, rows);
+    const n = await upsertRows(env.ANALYTICS_DB, rows);
+    inserted += n;
+    detail.push({ month: months[i], mapped: rows.length, inserted: n });
   }
   // The next GET /api/chess recomputes with the new rows.
   await env.ANALYTICS_KV.delete(CHESS_SUMMARY_KEY);
-  return { months, inserted };
+
+  const stored = await env.ANALYTICS_DB.prepare(
+    "SELECT COUNT(*) AS count, MIN(end_time) AS first_end, MAX(end_time) AS last_end FROM chess_games WHERE time_class = ?"
+  )
+    .bind(chess.timeClass)
+    .first<{ count: number; first_end: number | null; last_end: number | null }>();
+
+  return {
+    since,
+    months,
+    inserted,
+    detail,
+    stored: { count: stored?.count ?? 0, firstEndTime: stored?.first_end ?? null, lastEndTime: stored?.last_end ?? null },
+  };
 }

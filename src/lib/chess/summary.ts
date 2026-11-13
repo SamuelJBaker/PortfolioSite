@@ -1,4 +1,5 @@
-import { HISTORY_MAX_POINTS, type ChessGameRow, type ChessSummary } from "./types";
+import { activityOf, buildSeries, colorSplitOf, endingsOf, expectationOf, formOf, openingsOf, streaksOf } from "./stats";
+import { HISTORY_MAX_POINTS, type ChessGameRow, type ChessGameView, type ChessSummary } from "./types";
 
 export interface SummaryConfig {
   username: string;
@@ -20,6 +21,21 @@ const DAY_SEC = 86400;
 export function monthStartSec(yyyyMm: string): number {
   const [y, m] = yyyyMm.split("-").map(Number);
   return Date.UTC(y, m - 1, 1) / 1000;
+}
+
+/** The card's view of a row. `replay` is attached server-side (refresh.ts). */
+export function gameView(r: ChessGameRow): ChessGameView {
+  return {
+    url: r.game_url,
+    endTime: r.end_time,
+    myColor: r.my_color,
+    outcome: r.outcome,
+    oppRating: r.opp_rating,
+    opening: r.opening_name,
+    openingUrl: r.eco_url,
+    fen: r.final_fen,
+    replay: null,
+  };
 }
 
 /**
@@ -61,19 +77,22 @@ export function summarize(
     else record.draw++;
   }
 
-  let bestWin: ChessSummary["bestWin"] = null;
+  let bestWinRow: ChessGameRow | null = null;
   for (const r of tracked) {
-    if (r.outcome === "W" && (!bestWin || r.opp_rating > bestWin.oppRating)) {
-      bestWin = { url: r.game_url, oppRating: r.opp_rating, endTime: r.end_time };
-    }
+    if (r.outcome === "W" && (!bestWinRow || r.opp_rating > bestWinRow.opp_rating)) bestWinRow = r;
   }
 
-  // d30: rating now minus the history point closest to, and not after, 30 days ago.
+  // d30: rating now minus the rating after the latest game with
+  // end_time <= now - 30 d. With no such game (history shorter than 30 days)
+  // the earliest stored game is the reference and d30Ref.fallback is true.
   const cutoff = nowSec - 30 * DAY_SEC;
-  let ref: { t: number; r: number } | null = null;
-  for (const p of history) if (p.t <= cutoff) ref = p;
+  let refGame: ChessGameRow | null = null;
+  for (const r of all) if (r.end_time <= cutoff) refGame = r;
+  const fallback = !refGame && all.length > 0;
+  if (!refGame && all.length) refGame = all[0];
+  const d30Ref = refGame ? { t: refGame.end_time, rating: refGame.my_rating, fallback } : null;
   const deltas = {
-    d30: rating !== null && ref ? rating - ref.r : null,
+    d30: rating !== null && d30Ref ? rating - d30Ref.rating : null,
     sinceTrack: rating !== null && startRating !== null ? rating - startRating : null,
     fromLow: rating !== null && low ? rating - low.rating : null,
   };
@@ -88,19 +107,19 @@ export function summarize(
     record,
     history,
     deltas,
+    d30Ref,
     low,
-    lastGame: last
-      ? {
-          url: last.game_url,
-          endTime: last.end_time,
-          myColor: last.my_color,
-          outcome: last.outcome,
-          oppRating: last.opp_rating,
-          opening: last.opening_name,
-          fen: last.final_fen,
-        }
-      : null,
-    bestWin,
+    lastGame: last ? gameView(last) : null,
+    bestWin: bestWinRow ? gameView(bestWinRow) : null,
+    series: buildSeries(all),
+    form: formOf(all),
+    streak: streaksOf(all),
+    colorSplit: colorSplitOf(all),
+    openings: openingsOf(all),
+    endings: endingsOf(all),
+    expectation: expectationOf(all),
+    activity: activityOf(all, nowSec),
+    review: null,
     fetchedAt: nowSec * 1000,
   };
 }

@@ -62,11 +62,12 @@ export default async function ChessAdminPage() {
 
       <h2 className="text-lg font-medium mb-3">Backfill</h2>
       <p className="text-sm text-muted mb-4">
-        Walks every archive month from {chess.backfillSince} to now, one request at a time, and inserts
-        rows that are not stored yet. Safe to re-run. Clears the cached summary when done.
+        Walks every archive month from the given month (default {chess.backfillSince}) to now, one
+        request at a time, and inserts rows that are not stored yet. Safe to re-run; the result lists
+        rows mapped and inserted per month and the stored range afterwards. Clears the cached summary.
       </p>
       <div className="mb-10">
-        <ChessBackfillButton />
+        <ChessBackfillButton defaultSince={chess.backfillSince} />
       </div>
 
       <h2 className="text-lg font-medium mb-3">Current summary</h2>
