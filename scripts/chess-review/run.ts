@@ -59,14 +59,32 @@ interface GameRow {
   end_time: number;
 }
 
-function d1(args: string[], local: boolean): unknown {
+/** Everything wrangler printed, minus npm's own "notice" chatter, for error messages. */
+function wranglerOutput(res: { stdout: string; stderr: string }): string {
+  return [res.stdout, res.stderr]
+    .join("\n")
+    .split("\n")
+    .filter((l) => l.trim() && !l.startsWith("npm notice"))
+    .join("\n")
+    .trim();
+}
+
+function d1(args: string[], local: boolean, attempt = 1): unknown {
   const res = spawnSync("npx", ["wrangler", "d1", "execute", DB, local ? "--local" : "--remote", "--json", ...args], {
     encoding: "utf8",
     maxBuffer: 64 * 1024 * 1024,
     env: { ...process.env, CLOUDFLARE_ACCOUNT_ID: process.env.CLOUDFLARE_ACCOUNT_ID ?? "bd8d9defd26c2c8507d72592756dca5c" },
   });
-  if (res.status !== 0) throw new Error(`wrangler d1 execute failed:\n${res.stderr || res.stdout}`);
   const start = res.stdout.indexOf("[");
+  if (res.status !== 0 || start === -1) {
+    // The Cloudflare API returns the odd transient error (a 7403 was seen once); one retry for remote.
+    if (!local && attempt === 1) {
+      console.log("wrangler d1 execute failed once, retrying in 3 s...");
+      Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 3000);
+      return d1(args, local, 2);
+    }
+    throw new Error(`wrangler d1 execute failed (exit ${res.status}):\n${wranglerOutput(res) || "(no output)"}`);
+  }
   return JSON.parse(res.stdout.slice(start));
 }
 
