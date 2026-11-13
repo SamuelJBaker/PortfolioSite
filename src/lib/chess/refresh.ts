@@ -2,9 +2,11 @@ import { chess } from "@/content/chess";
 import type { CacheKv } from "@/lib/cache";
 import { delay, fetchJson } from "@/lib/http";
 import { mapArchive, type ArchiveResponse } from "./ingest";
+import type { ClassCounts } from "./classify";
 import { replayFromPgn } from "./replay";
+import { blundersPerGame, reviewAggregate, type ReviewedGameRow } from "./stats-review";
 import { monthStartSec, summarize } from "./summary";
-import type { ChessGameRow, ChessGameView, ChessSummary } from "./types";
+import type { ChessGameReview, ChessGameRow, ChessGameView, ChessMoveReview, ChessReview, ChessSummary } from "./types";
 
 /**
  * Server-side refresh and backfill for the chess card. Every chess.com call
@@ -149,20 +151,91 @@ export async function readRows(db: D1Database): Promise<ChessGameRow[]> {
   return result.results ?? [];
 }
 
-function withReplay(view: ChessGameView | null, rows: ChessGameRow[]): ChessGameView | null {
-  if (!view) return null;
-  const row = rows.find((r) => r.game_url === view.url);
-  return { ...view, replay: replayFromPgn(row?.pgn) };
+interface ReviewDbRow {
+  game_url: string;
+  engine: string;
+  depth: number;
+  acc_me: number | null;
+  acc_opp: number | null;
+  counts_me: string;
+  counts_opp: string;
+  moves: string;
+  reviewed_at: number;
 }
 
-/** Summary from D1 alone (admin page, and after stats were fetched), with board replays attached. */
+function parseJson<T>(text: string, fallback: T): T {
+  try {
+    return JSON.parse(text) as T;
+  } catch {
+    return fallback;
+  }
+}
+
+/** Review rows (chess_reviews) for the stored games, newest game first. */
+export async function readReviews(db: D1Database): Promise<Map<string, ReviewDbRow>> {
+  const result = await db
+    .prepare(
+      `SELECT r.game_url, r.engine, r.depth, r.acc_me, r.acc_opp, r.counts_me, r.counts_opp, r.moves, r.reviewed_at
+       FROM chess_reviews r JOIN chess_games g ON g.game_url = r.game_url
+       WHERE g.time_class = ? AND g.end_time >= ? ORDER BY g.end_time DESC`
+    )
+    .bind(chess.timeClass, monthStartSec(chess.backfillSince))
+    .all<ReviewDbRow>();
+  return new Map((result.results ?? []).map((r) => [r.game_url, r]));
+}
+
+function gameReview(row: ChessGameRow, r: ReviewDbRow | undefined): ChessGameReview | null {
+  if (!r) return null;
+  return {
+    accMe: r.acc_me,
+    accOpp: r.acc_opp,
+    ccAccMe: row.cc_accuracy_me,
+    ccAccOpp: row.cc_accuracy_opp,
+    countsMe: parseJson<ClassCounts>(r.counts_me, {}),
+    countsOpp: parseJson<ClassCounts>(r.counts_opp, {}),
+    moves: parseJson<ChessMoveReview[]>(r.moves, []),
+    engine: r.engine,
+    depth: r.depth,
+  };
+}
+
+/** The summary's review block from the stored rows and their reviews; null with no reviews. */
+export function buildReviewBlock(rows: ChessGameRow[], reviews: Map<string, ReviewDbRow>): ChessReview | null {
+  if (reviews.size === 0) return null;
+  const reviewed: ReviewedGameRow[] = [];
+  let newest: ReviewDbRow | null = null;
+  for (const row of rows) {
+    const r = reviews.get(row.game_url);
+    if (!r) continue;
+    reviewed.push({ endTime: row.end_time, outcome: row.outcome, accMe: r.acc_me, countsMe: parseJson<ClassCounts>(r.counts_me, {}) });
+    if (!newest || r.reviewed_at > newest.reviewed_at) newest = r;
+  }
+  if (!newest) return null;
+  return {
+    coverage: { reviewed: reviewed.length, total: rows.length },
+    engine: newest.engine,
+    depth: newest.depth,
+    aggregate: reviewAggregate(reviewed),
+    blundersPerGame: blundersPerGame(reviewed),
+  };
+}
+
+function withDetail(view: ChessGameView | null, rows: ChessGameRow[], reviews: Map<string, ReviewDbRow>): ChessGameView | null {
+  if (!view) return null;
+  const row = rows.find((r) => r.game_url === view.url);
+  return { ...view, replay: replayFromPgn(row?.pgn), review: row ? gameReview(row, reviews.get(row.game_url)) : null };
+}
+
+/** Summary from D1 alone (admin page, and after stats were fetched), with replays and reviews attached. */
 export async function summarizeFromDb(db: D1Database, statsRating: number | null, now = new Date()): Promise<ChessSummary> {
   const rows = await readRows(db);
+  const reviews = await readReviews(db);
   const summary = summarize(rows, { rating: statsRating }, chess, Math.floor(now.getTime() / 1000));
   return {
     ...summary,
-    lastGame: withReplay(summary.lastGame, rows),
-    bestWin: withReplay(summary.bestWin, rows),
+    lastGame: withDetail(summary.lastGame, rows, reviews),
+    bestWin: withDetail(summary.bestWin, rows, reviews),
+    review: buildReviewBlock(rows, reviews),
   };
 }
 

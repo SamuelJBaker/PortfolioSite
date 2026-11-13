@@ -45,6 +45,8 @@ export const TERMINATIONS = [
 ] as const;
 export type ChessTermination = (typeof TERMINATIONS)[number];
 
+import type { ClassCounts, MoveClass } from "./classify";
+import type { ReviewAggregate } from "./stats-review";
 import type {
   ActivityCell,
   ColorStats,
@@ -77,10 +79,39 @@ export interface ChessGameView {
   fen: string;
   /** Null when the row has no PGN yet (stored before migration 0004). */
   replay: ChessReplay | null;
+  /** Null when the game has not been reviewed. */
+  review: ChessGameReview | null;
 }
 
-/** Filled by phase 6c (move review); null until then. */
-export type ChessReview = Record<string, unknown>;
+/** One ply of a reviewed game: class, eval after the move (cp, white's view, clamped), mate distance. */
+export interface ChessMoveReview {
+  c: MoveClass;
+  e: number;
+  m: number | null;
+}
+
+/** The review row for one game. Our own Stockfish analysis; cc* are chess.com's figures when the API had them. */
+export interface ChessGameReview {
+  accMe: number | null;
+  accOpp: number | null;
+  ccAccMe: number | null;
+  ccAccOpp: number | null;
+  countsMe: ClassCounts;
+  countsOpp: ClassCounts;
+  moves: ChessMoveReview[];
+  engine: string;
+  depth: number;
+}
+
+/** The review block of the summary; null until at least one game is reviewed. */
+export interface ChessReview {
+  coverage: { reviewed: number; total: number };
+  /** Engine and depth of the newest review row, for the footer line. */
+  engine: string;
+  depth: number;
+  aggregate: ReviewAggregate;
+  blundersPerGame: { current: number | null; previous: number | null };
+}
 
 export interface ChessHistoryPoint {
   /** Unix seconds of the last game that day. */

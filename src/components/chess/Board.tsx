@@ -3,7 +3,9 @@
 import * as React from "react";
 import { orientBoard, parseFenBoard } from "../../lib/chess/fen";
 import { outcomeWord } from "../../lib/chess/format";
+import type { MoveClass } from "../../lib/chess/classify";
 import type { ChessColor, ChessOutcome } from "../../lib/chess/types";
+import { CLASS_META } from "./classes";
 import { pieceSymbolId } from "./Pieces";
 
 const SQUARE = 32;
@@ -20,6 +22,11 @@ export interface BoardProps {
   myColor: ChessColor;
   outcome: ChessOutcome;
   className?: string;
+  /** Controlled ply; with onPlyChange the parent owns the position (eval strip scrubbing). */
+  ply?: number;
+  onPlyChange?: (ply: number) => void;
+  /** moveClasses[i - 1] labels ply i when the game has a review. */
+  moveClasses?: MoveClass[];
 }
 
 /** Row and column on the oriented board for a square name like "e4". */
@@ -62,17 +69,22 @@ function ControlButton({ label, onClick, off, children }: { label: string; onCli
  * or its controls have focus; Home and End jump. Opens on the final position
  * so the default render matches the static board it replaces.
  */
-export function Board({ fens, sans, lastMoves, myColor, outcome, className }: BoardProps) {
+export function Board({ fens, sans, lastMoves, myColor, outcome, className, ply: controlledPly, onPlyChange, moveClasses }: BoardProps) {
   const total = Math.max(0, fens.length - 1);
-  const [ply, setPly] = React.useState(total);
+  const [ownPly, setOwnPly] = React.useState(total);
   // A different game (new fens) resets to its final position.
   const fensKey = fens[fens.length - 1] ?? "";
   const lastKeyRef = React.useRef(fensKey);
   if (lastKeyRef.current !== fensKey) {
     lastKeyRef.current = fensKey;
-    setPly(total);
+    setOwnPly(total);
   }
+  const ply = controlledPly ?? ownPly;
   const current = Math.min(ply, total);
+  const setPly = (next: number) => {
+    setOwnPly(next);
+    onPlyChange?.(next);
+  };
 
   const parsed = parseFenBoard(fens[current] ?? "");
   const board = parsed ? orientBoard(parsed, myColor) : null;
@@ -181,6 +193,12 @@ export function Board({ fens, sans, lastMoves, myColor, outcome, className }: Bo
       </div>
       <p className="mt-1.5 h-5 font-mono text-sm text-neutral-100" aria-live="polite">
         {total ? moveLabel(current, sans) : "Final position"}
+        {total && current > 0 && moveClasses?.[current - 1] ? (
+          <span className="ml-2 text-xs" style={{ color: CLASS_META[moveClasses[current - 1]].color }}>
+            {CLASS_META[moveClasses[current - 1]].glyph ? `${CLASS_META[moveClasses[current - 1]].glyph} ` : ""}
+            {CLASS_META[moveClasses[current - 1]].word}
+          </span>
+        ) : null}
       </p>
     </div>
   );
