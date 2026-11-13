@@ -1,4 +1,5 @@
 import * as React from "react";
+import Link from "next/link";
 import { headers } from "next/headers";
 import { getCloudflareContext } from "@opennextjs/cloudflare";
 import { type AccessEnv, accessLogoutUrl } from "@/lib/access";
@@ -27,6 +28,9 @@ export default async function AdminLayout({ children }: { children: React.ReactN
               <a href="/admin/now" className="hover:text-neutral-100 transition">Now</a>
               <a href="/admin/assets" className="hover:text-neutral-100 transition">Assets</a>
               <a href="/admin/chess" className="hover:text-neutral-100 transition">Chess</a>
+              <Link href="/admin/applications" className="hover:text-neutral-100 transition">Applications</Link>
+              <a href="/admin/resumes" className="hover:text-neutral-100 transition">Resumes</a>
+              <a href="/admin/stats" className="hover:text-neutral-100 transition">Stats</a>
             </nav>
           </div>
           <div className="flex items-center gap-4 text-xs">
