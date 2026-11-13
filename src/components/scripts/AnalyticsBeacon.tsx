@@ -173,7 +173,12 @@ export function AnalyticsBeacon() {
     };
 
     // -- dwell: on every hide, may repeat ----------------------------------------
+    // visibilitychange and pagehide both fire on a navigation; one dwell per hide.
+    let lastDwell = 0;
     const sendDwell = () => {
+      const t = Date.now();
+      if (t - lastDwell < 1000) return;
+      lastDwell = t;
       send({ sessionId, event: "dwell", payload: { visible_ms: visibleMs(), max_scroll_pct: maxScroll } }, true);
     };
     const onVisibility = () => {
